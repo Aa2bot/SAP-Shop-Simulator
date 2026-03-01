@@ -1,0 +1,152 @@
+﻿The '''{{IconSAP|Turtle Pack|image=Turtle Icon.png}}''' is the first pack in '''Super Auto Pets''' and is immediately available to all players for free. It was included alongside the games release on itch.io (April 14th 2021) as well as its release on Steam (September 24th, 2021).
+
+{| class="wikitable"
+! Tier !! colspan=2 | Pets / Food
+|- <!-- TIER 1 -->
+| style="width: 50px; text-align: center;" | {{IconSAP|Tier 1|mode=image}}
+| style="width: calc(40px * 18);" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    --><span>{{IconSAP|Duck|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Beaver|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Pigeon|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Otter|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Pig|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Ant|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Mosquito|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Fish|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Cricket|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Horse|mode=image|size=40x40px}}</span><!--
+--></div>
+| style="width: calc(40px * 7); text-align: right;" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); direction: rtl; place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    Place in reverse order due to "direction: rtl;"
+    --><span>{{IconSAP|Honey|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Apple|mode=image|size=40x40px}}</span><!--
+--></div>
+
+|- <!-- TIER 2 -->
+| style="width: 50px; text-align: center;" | {{IconSAP|Tier 2|mode=image}}
+| style="width: calc(40px * 18);" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    --><span>{{IconSAP|Snail|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Crab|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Swan|mode=image|size=x40px}}</span><!--
+    --><span>{{IconSAP|Rat|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Hedgehog|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Peacock|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Flamingo|mode=image|size=35px}}</span><!--
+    --><span>{{IconSAP|Worm|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Kangaroo|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Spider|mode=image|size=40x40px}}</span><!--
+--></div>
+| style="width: calc(40px * 7); text-align: right;" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); direction: rtl; place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    Place in reverse order due to "direction: rtl;"
+    --><span>{{IconSAP|Cupcake|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Meat Bone|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Sleeping Pill|mode=image|size=40x40px}}</span><!--
+--></div>
+
+|- <!-- TIER 3 -->
+| style="width: 50px; text-align: center;" | {{IconSAP|Tier 3|mode=image}}
+| style="width: calc(40px * 18);" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    --><span>{{IconSAP|Dodo|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Badger|mode=image|size=x40px}}</span><!--
+    --><span>{{IconSAP|Dolphin|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Giraffe|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Elephant|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Camel|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Rabbit|mode=image|size=35px}}</span><!--
+    --><span>{{IconSAP|Ox|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Dog|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Sheep|mode=image|size=x40px}}</span><!--
+--></div>
+| style="width: calc(40px * 7); text-align: right;" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); direction: rtl; place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    Place in reverse order due to "direction: rtl;"
+    --><span>{{IconSAP|Garlic|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Salad Bowl|mode=image|size=40x40px}}</span><!--
+--></div>
+
+|- <!-- TIER 4 -->
+| style="width: 50px; text-align: center;" | {{IconSAP|Tier 4|mode=image}}
+| style="width: calc(40px * 18);" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    --><span>{{IconSAP|Skunk|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Hippo|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Bison|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Blowfish|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Turtle|mode=image|size=x40px}}</span><!--
+    --><span>{{IconSAP|Squirrel|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Penguin|mode=image|size=30px}}</span><!--
+    --><span>{{IconSAP|Deer|mode=image|size=x40px}}</span><!--
+    --><span>{{IconSAP|Whale|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Parrot|mode=image|size=x40px}}</span><!--
+--></div>
+| style="width: calc(40px * 7); text-align: right;" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); direction: rtl; place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    Place in reverse order due to "direction: rtl;"
+    --><span>{{IconSAP|Pear|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Canned Food|mode=image|size=x40px}}</span><!--
+--></div>
+
+|- <!-- TIER 5 -->
+| style="width: 50px; text-align: center;" | {{IconSAP|Tier 5|mode=image}}
+| style="width: calc(40px * 18);" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    --><span>{{IconSAP|Scorpion|mode=image|size=x40px}}</span><!--
+    --><span>{{IconSAP|Crocodile|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Rhino|mode=image|size=40x40px}}</span><!--    
+    --><span>{{IconSAP|Monkey|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Armadillo|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Cow|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Seal|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Rooster|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Shark|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Turkey|mode=image|size=40x40px}}</span><!--
+--></div>
+| style="width: calc(40px * 7); text-align: right;" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); direction: rtl; place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    Place in reverse order due to "direction: rtl;"
+    --><span>{{IconSAP|Sushi|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Chocolate|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Chili|mode=image|size=40x40px}}</span><!--
+--></div>
+
+|- <!-- TIER 6 -->
+| style="width: 50px; text-align: center;" | {{IconSAP|Tier 6|mode=image}}
+| style="width: calc(40px * 18);" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    --><span>{{IconSAP|Leopard|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Boar|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Tiger|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Wolverine|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Gorilla|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Dragon|mode=image|size=x40px}}</span><!--
+    --><span>{{IconSAP|Mammoth|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Cat|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Snake|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Fly|mode=image|size=40x40px}}</span><!--
+--></div>
+| style="width: calc(40px * 7); text-align: right;" |
+<div style="display: grid; grid-template-columns: repeat(auto-fill,minmax(40px,1fr)); direction: rtl; place-items: center; gap: 6px; margin: -0.25em auto;"><!--
+    Place in reverse order due to "direction: rtl;"
+    --><span>{{IconSAP|Pizza|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Mushroom|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Melon|mode=image|size=40x40px}}</span><!--
+    --><span>{{IconSAP|Steak|mode=image|size=x40px}}</span><!--
+--></div>
+|}
+
+==History==
+{{History
+|0.31: 
+Added Pigeon and removed Mouse
+|0.27:
+Added Armadillo, Wolverine and Mouse. Removed Shrimp.
+|0.22:
+Name has been rebranded from Standard Pack to Turtle Pack.
+|0.14: 
+Added Boar
+}}

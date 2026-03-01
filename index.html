@@ -1,0 +1,111 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shop Simulator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="hud">
+      <div class="hud-left">
+        <div class="gold-wrap">
+          <img class="hud-icon" src="assets/sap_textures/Texture2D/Coin.png" alt="Gold" />
+          <span id="goldValue">10</span>
+        </div>
+        <div class="turn-wrap">
+          <img class="hud-icon" src="assets/sap_textures/Texture2D/Hourglass.png" alt="Turn" />
+          <span id="turnValue">1</span>
+        </div>
+      </div>
+      <div class="top-controls">
+        <label for="packSelect" class="pack-label">Pack</label>
+        <select id="packSelect" class="pack-select">
+          <option value="1">Pack 1 - Turtle</option>
+          <option value="2">Pack 2 - Puppy</option>
+          <option value="3">Pack 3 - Star</option>
+          <option value="4">Pack 4 - Golden</option>
+          <option value="5">Pack 5 - Unicorn</option>
+          <option value="6">Pack 6 - Danger</option>
+        </select>
+        <label for="playerToyInput" class="pack-label">Toy</label>
+        <select id="playerToyInput" class="pack-select">
+          <option value="__auto__">Auto (ability/random)</option>
+        </select>
+        <input id="playerToyLevelInput" class="pack-select" type="number" min="1" max="3" value="1" style="width:70px" />
+        <button id="restartBtn" class="small-btn">Restart Game</button>
+        <button id="endTurnBtn" class="small-btn">End Turn</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel board-panel">
+        <h2>Main Board</h2>
+        <p class="hint">5 spaces. Buy pets from the pet shop to place them here. Click one board pet, then click same pet to stack. You can also drag pets from shop to board to buy.</p>
+        <div id="boardSlots" class="slots board-slots"></div>
+      </section>
+
+      <section class="panel shop-panel">
+        <h2>Pet Shop</h2>
+        <p class="hint">3 slots. Buying a pet costs 3 gold. Right-click or use Freeze button to freeze.</p>
+        <div id="petSlots" class="slots shop-slots"></div>
+
+        <div id="tierUpInline" class="tier-up-inline hidden">
+          <h3 class="overlay-title">Tier-Up Reward</h3>
+          <p id="tierUpText" class="overlay-text"></p>
+          <div id="tierUpChoices" class="tier-up-choices"></div>
+          <button id="tierUpSkipBtn" class="small-btn">Skip</button>
+        </div>
+      </section>
+
+      <section class="panel food-panel">
+        <h2>Food Shop</h2>
+        <p class="hint">1 slot. Drag food onto a board pet to feed it. Right-click or use Freeze button to freeze.</p>
+        <div id="foodSlots" class="slots food-slots"></div>
+        <h3 class="overlay-title">Extra Stocked Food</h3>
+        <p class="hint">Stocked foods from abilities appear here and do not replace the main food slot.</p>
+        <div id="extraFoodSlots" class="slots extra-food-slots"></div>
+      </section>
+
+      <section class="panel battle-panel">
+        <h2>Battle Report</h2>
+        <p id="battleSummary" class="hint">No battle yet.</p>
+        <div id="battleLog" class="battle-log"></div>
+      </section>
+    </main>
+
+    <footer class="controls">
+      <button id="rollBtn" class="roll-btn">Roll Shop (-1 Gold)</button>
+      <span id="statusText" class="status"></span>
+    </footer>
+  </div>
+
+  <div id="hoverTooltip" class="hover-tooltip hidden" role="tooltip"></div>
+  <div id="battleScreen" class="battle-screen hidden" aria-live="polite">
+    <div class="battle-stage">
+      <div class="battle-head">
+        <h2>Battle Phase</h2>
+        <button id="battleSkipBtn" class="small-btn">Skip</button>
+      </div>
+      <p id="battleSceneMeta" class="battle-meta"></p>
+      <p id="battleSceneLevels" class="battle-meta"></p>
+      <p id="battleSceneStatus" class="battle-meta"></p>
+      <div class="battle-lane">
+        <h3>Opponent</h3>
+        <div id="battleOpponentSlots" class="battle-slots"></div>
+      </div>
+      <div class="battle-center">
+        <p id="battleSceneEvent" class="battle-event">Preparing battle...</p>
+      </div>
+      <div class="battle-lane">
+        <h3>You</h3>
+        <div id="battlePlayerSlots" class="battle-slots"></div>
+      </div>
+      <div id="battleSceneLog" class="battle-scene-log"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
