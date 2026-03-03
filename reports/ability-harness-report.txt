@@ -1,31 +1,37 @@
 Ability Harness Report
-Generated: 2026-03-01T00:53:37.893Z
+Generated: 2026-03-03T19:45:44.917Z
 
 Totals
 - Ability entries: 897
-- Covered entries: 501
-- Unsupported entries: 221
-- Risky bridge entries: 218
+- Covered entries: 709
+- Unsupported entries: 188
+- Risky bridge entries: 188
 
 Trigger Summary
-- after_attack: 0/6 (0.0%)
-- before_attack: 0/15 (0.0%)
+- after_attack: 6/6 (100.0%)
+- before_attack: 18/18 (100.0%)
 - buy: 27/27 (100.0%)
 - end_turn: 69/69 (100.0%)
 - faint: 189/189 (100.0%)
 - food_eat: 9/9 (100.0%)
-- friend_ahead_attacks: 0/12 (0.0%)
+- friend_ahead_attacks: 12/12 (100.0%)
 - friend_bought: 3/3 (100.0%)
+- friend_bought_tier1: 6/6 (100.0%)
+- friend_lost_perk: 9/9 (100.0%)
 - friend_sold: 6/6 (100.0%)
 - friend_summoned: 33/33 (100.0%)
 - friendly_gained_perk: 12/12 (100.0%)
-- friendly_toy_broke: 0/3 (0.0%)
+- friendly_toy_broke: 3/3 (100.0%)
+- gained_perk: 3/3 (100.0%)
+- gained_perk_or_ailment: 3/3 (100.0%)
 - hurt: 27/27 (100.0%)
-- knock_out: 0/9 (0.0%)
+- knock_out: 9/9 (100.0%)
 - level_up: 4/4 (100.0%)
-- other: 0/218 (0.0%)
+- other: 0/188 (0.0%)
+- passive_battle: 3/3 (100.0%)
+- passive_toy_repeat: 3/3 (100.0%)
 - sell: 57/57 (100.0%)
-- start_battle: 0/133 (0.0%)
+- start_battle: 133/133 (100.0%)
 - start_turn: 65/65 (100.0%)
 
 Top Unsupported (first 50)
@@ -42,9 +48,6 @@ Top Unsupported (first 50)
 - P1 Cat L1 [other] Shop food gives two times attack and health. Works 2 times per turn.
 - P1 Cat L2 [other] Shop food gives three times attack and health. Works 2 times per turn.
 - P1 Cat L3 [other] Shop food gives four times attack and health. Works 2 times per turn.
-- P1 Dragon L1 [other] Tier 1 friend bought: Give friends +1 attack and +1 health. Works 4 times per turn.
-- P1 Dragon L2 [other] Tier 1 friend bought: Give friends +2 attack and +2 health. Works 4 times per turn.
-- P1 Dragon L3 [other] Tier 1 friend bought: Give friends +3 attack and +3 health. Works 4 times per turn.
 - P1 Fly L1 [other] Friend faints: Summon one 4/4 fly in its place. Works 3 times per turn.
 - P1 Fly L2 [other] Friend faints: Summon one 8/8 fly in its place. Works 3 times per turn.
 - P1 Fly L3 [other] Friend faints: Summon one 12/12 fly in its place. Works 3 times per turn.
@@ -54,28 +57,31 @@ Top Unsupported (first 50)
 - P1 Wolverine L1 [other] Four friends hurt: Remove 3 health from all enemies.
 - P1 Wolverine L2 [other] Four friends hurt: Remove 6 health from all enemies.
 - P1 Wolverine L3 [other] Four friends hurt: Remove 9 health from all enemies.
-- P2 Bilby L1 [other] Friend lost perk: Give it Garlic. Works 1 time per turn.
-- P2 Bilby L2 [other] Friend lost perk: Give it Garlic. Works 2 times per turn.
-- P2 Bilby L3 [other] Friend lost perk: Give it Garlic. Works 3 times per turn.
-- P2 Toucan L1 [other] Before first attack: Copy tier 5 or lower perk (or Egg) to the nearest friend behind.
-- P2 Toucan L2 [other] Before first attack: Copy tier 5 or lower perk (or Egg) to the two nearest friends behind.
-- P2 Toucan L3 [other] Before first attack: Copy tier 5 or lower perk (or Egg) to the three nearest friends behind.
-- P2 Whale Shark L1 [other] Gain perk or ailment: Remove it and gain +1 attack and +1 health. Triple in battle.
-- P2 Whale Shark L2 [other] Gain perk or ailment: Remove it and gain +2 attack and +2 health. Triple in battle.
-- P2 Whale Shark L3 [other] Gain perk or ailment: Remove it and gain +3 attack and +3 health. Triple in battle.
-- P2 Mosasaurus L1 [friendly_toy_broke] Friendly toy broke: Give adjacent friends +2 attack and +3 health.
-- P2 Mosasaurus L2 [friendly_toy_broke] Friendly toy broke: Give adjacent friends +4 attack and +6 health.
-- P2 Mosasaurus L3 [friendly_toy_broke] Friendly toy broke: Give adjacent friends +6 attack and +9 health.
-- P2 Panther L1 [other] Perks are two times stronger on this in battle.
-- P2 Panther L2 [other] Perks are three times stronger on this in battle.
-- P2 Panther L3 [other] Perks are four times stronger on this in battle.
-- P2 Dragon L1 [other] Tier 1 friend bought: Give friends +1 attack and +1 health. Works 4 times per turn.
-- P2 Dragon L2 [other] Tier 1 friend bought: Give friends +2 attack and +2 health. Works 4 times per turn.
-- P2 Dragon L3 [other] Tier 1 friend bought: Give friends +3 attack and +3 health. Works 4 times per turn.
-- P2 Elephant Seal L1 [other] Gain perk: Give three friends +4 attack and +4 health until next turn. Works 1 time per turn.
-- P2 Elephant Seal L2 [other] Gain perk: Give three friends +8 attack and +8 health until next turn. Works 1 time per turn.
-- P2 Elephant Seal L3 [other] Gain perk: Give three friends +12 attack and +12 health until next turn. Works 1 time per turn.
-- P2 Puma L1 [other] Friendly toy repeats its ability as level 1.
-- P2 Puma L2 [other] Friendly toy repeats its ability as level 2.
-- P2 Puma L3 [other] Friendly toy repeats its ability as level 3.
 - P3 Kiwi L1 [other] Hurt & Sell: Give the back-most friendly Strawberry pet +1 attack.
+- P3 Kiwi L2 [other] Hurt & Sell: Give the back-most friendly Strawberry pet +2 attack.
+- P3 Kiwi L3 [other] Hurt & Sell: Give the back-most friendly Strawberry pet +3 attack.
+- P3 Bass L1 [other] Faint & Sell: Give one level 2 <b>Sell</b> friend +1 experience.
+- P3 Bass L2 [other] Faint & Sell: Give one level 2 <b>Sell</b> friend +2 experience.
+- P3 Bass L3 [other] Faint & Sell: Give one level 2 <b>Sell</b> friend +3 experience.
+- P3 Dumbo Octopus L1 [other] Roll 3 times: Stock ANY food from the 3 last unlocked tiers and discount it by 1 gold.
+- P3 Dumbo Octopus L2 [other] Roll 3 times: Stock ANY food from the 3 last unlocked tiers and discount it by 2 gold.
+- P3 Dumbo Octopus L3 [other] Roll 3 times: Stock ANY food from the 3 last unlocked tiers and discount it by 3 gold.
+- P3 Iguana L1 [other] Enemy summoned or pushed: Deal 2 damage to it.
+- P3 Iguana L2 [other] Enemy summoned or pushed: Deal 4 damage to it.
+- P3 Iguana L3 [other] Enemy summoned or pushed: Deal 6 damage to it.
+- P3 Jellyfish L1 [other] Friend level-up: Gain +1 attack and +1 health.
+- P3 Jellyfish L2 [other] Friend level-up: Gain +2 attack and +2 health.
+- P3 Jellyfish L3 [other] Friend level-up: Gain +3 attack and +3 health.
+- P3 Koala L1 [other] Friend hurt: Give it the Eucalyptus perk. Works 1 time per turn.
+- P3 Koala L2 [other] Friend hurt: Give it the Eucalyptus perk. Works 2 times per turn.
+- P3 Koala L3 [other] Friend hurt: Give it the Eucalyptus perk. Works 3 times per turn.
+- P3 Shima Enaga L1 [other] Friend faints: If it had a Strawberry, summon one 2/2 friend in its place. Works 2 times per turn.
+- P3 Shima Enaga L2 [other] Friend faints: If it had a Strawberry, summon one 4/4 friend in its place. Works 2 times per turn.
+- P3 Shima Enaga L3 [other] Friend faints: If it had a Strawberry, summon one 6/6 friend in its place. Works 2 times per turn.
+- P3 Capybara L1 [other] Roll & Sell: Give newly rolled shop pets +1 attack and +1 health.
+- P3 Capybara L2 [other] Roll & Sell: Give newly rolled shop pets +2 attack and +2 health.
+- P3 Capybara L3 [other] Roll & Sell: Give newly rolled shop pets +3 attack and +3 health.
+- P3 Cassowary L1 [other] Friendly gained strawberry: Gain +1 health. Also gain +1 attack until next turn.
+- P3 Cassowary L2 [other] Friendly gained strawberry: Gain +2 health. Also gain +2 attack until next turn.
+- P3 Cassowary L3 [other] Friendly gained strawberry: Gain +3 health. Also gain +3 attack until next turn.
+- P3 Okapi L1 [other] Roll: Gain +1 attack and +1 health until next turn. Works 5 times per turn.

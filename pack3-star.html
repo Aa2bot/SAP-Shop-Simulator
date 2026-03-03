@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shop Simulator</title>
+  <title>Shop Simulator - Pack 3 (Star)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -44,7 +44,7 @@
         <button id="restartBtn" class="small-btn">Restart Game</button>
         <button id="endTurnBtn" class="small-btn">End Turn</button>
       </div>
-    </header>
+      </header>
 
     <main class="layout">
       <section class="panel board-panel">
@@ -136,6 +136,16 @@
     </div>
   </div>
 
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const packSelect = document.getElementById('packSelect');
+      if (packSelect) {
+        packSelect.value = '3';
+        packSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  </script>
   <script src="app.js?v=toyui-20260303d"></script>
 </body>
 </html>
+

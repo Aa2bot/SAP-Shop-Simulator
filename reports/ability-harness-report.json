@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-03-01T00:53:37.893Z",
+  "generatedAt": "2026-03-03T19:45:44.917Z",
   "totals": {
     "abilityEntries": 897,
-    "coveredEntries": 501,
-    "unsupportedEntries": 221,
-    "riskyEntries": 218
+    "coveredEntries": 709,
+    "unsupportedEntries": 188,
+    "riskyEntries": 188
   },
   "triggerSummary": {
     "after_attack": {
       "total": 6,
-      "covered": 0
+      "covered": 6
     },
     "before_attack": {
-      "total": 15,
-      "covered": 0
+      "total": 18,
+      "covered": 18
     },
     "buy": {
       "total": 27,
@@ -33,11 +33,19 @@
     },
     "friend_ahead_attacks": {
       "total": 12,
-      "covered": 0
+      "covered": 12
     },
     "friend_bought": {
       "total": 3,
       "covered": 3
+    },
+    "friend_bought_tier1": {
+      "total": 6,
+      "covered": 6
+    },
+    "friend_lost_perk": {
+      "total": 9,
+      "covered": 9
     },
     "friend_sold": {
       "total": 6,
@@ -53,7 +61,15 @@
     },
     "friendly_toy_broke": {
       "total": 3,
-      "covered": 0
+      "covered": 3
+    },
+    "gained_perk": {
+      "total": 3,
+      "covered": 3
+    },
+    "gained_perk_or_ailment": {
+      "total": 3,
+      "covered": 3
     },
     "hurt": {
       "total": 27,
@@ -61,15 +77,23 @@
     },
     "knock_out": {
       "total": 9,
-      "covered": 0
+      "covered": 9
     },
     "level_up": {
       "total": 4,
       "covered": 4
     },
     "other": {
-      "total": 218,
+      "total": 188,
       "covered": 0
+    },
+    "passive_battle": {
+      "total": 3,
+      "covered": 3
+    },
+    "passive_toy_repeat": {
+      "total": 3,
+      "covered": 3
     },
     "sell": {
       "total": 57,
@@ -77,7 +101,7 @@
     },
     "start_battle": {
       "total": 133,
-      "covered": 0
+      "covered": 133
     },
     "start_turn": {
       "total": 65,
@@ -231,39 +255,6 @@
     {
       "packId": 1,
       "packName": "Turtle Pack",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 1,
-      "text": "Tier 1 friend bought: Give friends +1 attack and +1 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 1,
-      "packName": "Turtle Pack",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 2,
-      "text": "Tier 1 friend bought: Give friends +2 attack and +2 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 1,
-      "packName": "Turtle Pack",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 3,
-      "text": "Tier 1 friend bought: Give friends +3 attack and +3 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 1,
-      "packName": "Turtle Pack",
       "petName": "Fly",
       "petKey": "fly",
       "level": 1,
@@ -356,270 +347,6 @@
       "petKey": "wolverine",
       "level": 3,
       "text": "Four friends hurt: Remove 9 health from all enemies.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Bilby",
-      "petKey": "bilby",
-      "level": 1,
-      "text": "Friend lost perk: Give it Garlic. Works 1 time per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Bilby",
-      "petKey": "bilby",
-      "level": 2,
-      "text": "Friend lost perk: Give it Garlic. Works 2 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Bilby",
-      "petKey": "bilby",
-      "level": 3,
-      "text": "Friend lost perk: Give it Garlic. Works 3 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Toucan",
-      "petKey": "toucan",
-      "level": 1,
-      "text": "Before first attack: Copy tier 5 or lower perk (or Egg) to the nearest friend behind.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Toucan",
-      "petKey": "toucan",
-      "level": 2,
-      "text": "Before first attack: Copy tier 5 or lower perk (or Egg) to the two nearest friends behind.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Toucan",
-      "petKey": "toucan",
-      "level": 3,
-      "text": "Before first attack: Copy tier 5 or lower perk (or Egg) to the three nearest friends behind.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Whale Shark",
-      "petKey": "whaleshark",
-      "level": 1,
-      "text": "Gain perk or ailment: Remove it and gain +1 attack and +1 health. Triple in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Whale Shark",
-      "petKey": "whaleshark",
-      "level": 2,
-      "text": "Gain perk or ailment: Remove it and gain +2 attack and +2 health. Triple in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Whale Shark",
-      "petKey": "whaleshark",
-      "level": 3,
-      "text": "Gain perk or ailment: Remove it and gain +3 attack and +3 health. Triple in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Mosasaurus",
-      "petKey": "mosasaurus",
-      "level": 1,
-      "text": "Friendly toy broke: Give adjacent friends +2 attack and +3 health.",
-      "trigger": "friendly_toy_broke",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Mosasaurus",
-      "petKey": "mosasaurus",
-      "level": 2,
-      "text": "Friendly toy broke: Give adjacent friends +4 attack and +6 health.",
-      "trigger": "friendly_toy_broke",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Mosasaurus",
-      "petKey": "mosasaurus",
-      "level": 3,
-      "text": "Friendly toy broke: Give adjacent friends +6 attack and +9 health.",
-      "trigger": "friendly_toy_broke",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Panther",
-      "petKey": "panther",
-      "level": 1,
-      "text": "Perks are two times stronger on this in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Panther",
-      "petKey": "panther",
-      "level": 2,
-      "text": "Perks are three times stronger on this in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Panther",
-      "petKey": "panther",
-      "level": 3,
-      "text": "Perks are four times stronger on this in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 1,
-      "text": "Tier 1 friend bought: Give friends +1 attack and +1 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 2,
-      "text": "Tier 1 friend bought: Give friends +2 attack and +2 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 3,
-      "text": "Tier 1 friend bought: Give friends +3 attack and +3 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Elephant Seal",
-      "petKey": "elephantseal",
-      "level": 1,
-      "text": "Gain perk: Give three friends +4 attack and +4 health until next turn. Works 1 time per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Elephant Seal",
-      "petKey": "elephantseal",
-      "level": 2,
-      "text": "Gain perk: Give three friends +8 attack and +8 health until next turn. Works 1 time per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Elephant Seal",
-      "petKey": "elephantseal",
-      "level": 3,
-      "text": "Gain perk: Give three friends +12 attack and +12 health until next turn. Works 1 time per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Puma",
-      "petKey": "puma",
-      "level": 1,
-      "text": "Friendly toy repeats its ability as level 1.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Puma",
-      "petKey": "puma",
-      "level": 2,
-      "text": "Friendly toy repeats its ability as level 2.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Puma",
-      "petKey": "puma",
-      "level": 3,
-      "text": "Friendly toy repeats its ability as level 3.",
       "trigger": "other",
       "covered": false,
       "route": "bridge_unclassified"
@@ -1287,39 +1014,6 @@
     {
       "packId": 3,
       "packName": "Pack 3",
-      "petName": "Real Velociraptor",
-      "petKey": "realvelociraptor",
-      "level": 1,
-      "text": "Friend lost perk: Return its perk. Works on one friend per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 3,
-      "packName": "Pack 3",
-      "petName": "Real Velociraptor",
-      "petKey": "realvelociraptor",
-      "level": 2,
-      "text": "Friend lost perk: Return its perk. Works on two different friends per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 3,
-      "packName": "Pack 3",
-      "petName": "Real Velociraptor",
-      "petKey": "realvelociraptor",
-      "level": 3,
-      "text": "Friend lost perk: Return its perk. Works on three different friends per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 3,
-      "packName": "Pack 3",
       "petName": "Spinosaurus",
       "petKey": "spinosaurus",
       "level": 1,
@@ -1478,39 +1172,6 @@
       "petKey": "doorheadant",
       "level": 3,
       "text": "Empty front space: Jump to the front and gain +12 health in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 4,
-      "packName": "Pack 4",
-      "petName": "Betta Fish",
-      "petKey": "bettafish",
-      "level": 1,
-      "text": "Friend lost perk: Give it the Guava perk. Works on one friend per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 4,
-      "packName": "Pack 4",
-      "petName": "Betta Fish",
-      "petKey": "bettafish",
-      "level": 2,
-      "text": "Friend lost perk: Give it the Guava perk. Works on two different friends per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 4,
-      "packName": "Pack 4",
-      "petName": "Betta Fish",
-      "petKey": "bettafish",
-      "level": 3,
-      "text": "Friend lost perk: Give it the Guava perk. Works on three different friends per turn.",
       "trigger": "other",
       "covered": false,
       "route": "bridge_unclassified"
@@ -2664,39 +2325,6 @@
     {
       "packId": 1,
       "packName": "Turtle Pack",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 1,
-      "text": "Tier 1 friend bought: Give friends +1 attack and +1 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 1,
-      "packName": "Turtle Pack",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 2,
-      "text": "Tier 1 friend bought: Give friends +2 attack and +2 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 1,
-      "packName": "Turtle Pack",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 3,
-      "text": "Tier 1 friend bought: Give friends +3 attack and +3 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 1,
-      "packName": "Turtle Pack",
       "petName": "Fly",
       "petKey": "fly",
       "level": 1,
@@ -2789,237 +2417,6 @@
       "petKey": "wolverine",
       "level": 3,
       "text": "Four friends hurt: Remove 9 health from all enemies.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Bilby",
-      "petKey": "bilby",
-      "level": 1,
-      "text": "Friend lost perk: Give it Garlic. Works 1 time per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Bilby",
-      "petKey": "bilby",
-      "level": 2,
-      "text": "Friend lost perk: Give it Garlic. Works 2 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Bilby",
-      "petKey": "bilby",
-      "level": 3,
-      "text": "Friend lost perk: Give it Garlic. Works 3 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Toucan",
-      "petKey": "toucan",
-      "level": 1,
-      "text": "Before first attack: Copy tier 5 or lower perk (or Egg) to the nearest friend behind.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Toucan",
-      "petKey": "toucan",
-      "level": 2,
-      "text": "Before first attack: Copy tier 5 or lower perk (or Egg) to the two nearest friends behind.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Toucan",
-      "petKey": "toucan",
-      "level": 3,
-      "text": "Before first attack: Copy tier 5 or lower perk (or Egg) to the three nearest friends behind.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Whale Shark",
-      "petKey": "whaleshark",
-      "level": 1,
-      "text": "Gain perk or ailment: Remove it and gain +1 attack and +1 health. Triple in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Whale Shark",
-      "petKey": "whaleshark",
-      "level": 2,
-      "text": "Gain perk or ailment: Remove it and gain +2 attack and +2 health. Triple in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Whale Shark",
-      "petKey": "whaleshark",
-      "level": 3,
-      "text": "Gain perk or ailment: Remove it and gain +3 attack and +3 health. Triple in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Panther",
-      "petKey": "panther",
-      "level": 1,
-      "text": "Perks are two times stronger on this in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Panther",
-      "petKey": "panther",
-      "level": 2,
-      "text": "Perks are three times stronger on this in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Panther",
-      "petKey": "panther",
-      "level": 3,
-      "text": "Perks are four times stronger on this in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 1,
-      "text": "Tier 1 friend bought: Give friends +1 attack and +1 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 2,
-      "text": "Tier 1 friend bought: Give friends +2 attack and +2 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Dragon",
-      "petKey": "dragon",
-      "level": 3,
-      "text": "Tier 1 friend bought: Give friends +3 attack and +3 health. Works 4 times per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Elephant Seal",
-      "petKey": "elephantseal",
-      "level": 1,
-      "text": "Gain perk: Give three friends +4 attack and +4 health until next turn. Works 1 time per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Elephant Seal",
-      "petKey": "elephantseal",
-      "level": 2,
-      "text": "Gain perk: Give three friends +8 attack and +8 health until next turn. Works 1 time per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Elephant Seal",
-      "petKey": "elephantseal",
-      "level": 3,
-      "text": "Gain perk: Give three friends +12 attack and +12 health until next turn. Works 1 time per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Puma",
-      "petKey": "puma",
-      "level": 1,
-      "text": "Friendly toy repeats its ability as level 1.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Puma",
-      "petKey": "puma",
-      "level": 2,
-      "text": "Friendly toy repeats its ability as level 2.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 2,
-      "packName": "Pack 2",
-      "petName": "Puma",
-      "petKey": "puma",
-      "level": 3,
-      "text": "Friendly toy repeats its ability as level 3.",
       "trigger": "other",
       "covered": false,
       "route": "bridge_unclassified"
@@ -3687,39 +3084,6 @@
     {
       "packId": 3,
       "packName": "Pack 3",
-      "petName": "Real Velociraptor",
-      "petKey": "realvelociraptor",
-      "level": 1,
-      "text": "Friend lost perk: Return its perk. Works on one friend per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 3,
-      "packName": "Pack 3",
-      "petName": "Real Velociraptor",
-      "petKey": "realvelociraptor",
-      "level": 2,
-      "text": "Friend lost perk: Return its perk. Works on two different friends per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 3,
-      "packName": "Pack 3",
-      "petName": "Real Velociraptor",
-      "petKey": "realvelociraptor",
-      "level": 3,
-      "text": "Friend lost perk: Return its perk. Works on three different friends per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 3,
-      "packName": "Pack 3",
       "petName": "Spinosaurus",
       "petKey": "spinosaurus",
       "level": 1,
@@ -3878,39 +3242,6 @@
       "petKey": "doorheadant",
       "level": 3,
       "text": "Empty front space: Jump to the front and gain +12 health in battle.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 4,
-      "packName": "Pack 4",
-      "petName": "Betta Fish",
-      "petKey": "bettafish",
-      "level": 1,
-      "text": "Friend lost perk: Give it the Guava perk. Works on one friend per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 4,
-      "packName": "Pack 4",
-      "petName": "Betta Fish",
-      "petKey": "bettafish",
-      "level": 2,
-      "text": "Friend lost perk: Give it the Guava perk. Works on two different friends per turn.",
-      "trigger": "other",
-      "covered": false,
-      "route": "bridge_unclassified"
-    },
-    {
-      "packId": 4,
-      "packName": "Pack 4",
-      "petName": "Betta Fish",
-      "petKey": "bettafish",
-      "level": 3,
-      "text": "Friend lost perk: Give it the Guava perk. Works on three different friends per turn.",
       "trigger": "other",
       "covered": false,
       "route": "bridge_unclassified"

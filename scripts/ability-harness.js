@@ -34,16 +34,21 @@ function parseTrigger(text) {
   if (!s) return 'none';
   if (/^Start of turn:/i.test(s)) return 'start_turn';
   if (/^End turn:/i.test(s)) return 'end_turn';
+  if (/^Tier 1 friend bought:/i.test(s)) return 'friend_bought_tier1';
   if (/^Buy:/i.test(s)) return 'buy';
   if (/^Sell:/i.test(s)) return 'sell';
   if (/^Level-up:/i.test(s)) return 'level_up';
   if (/^Eats? food:/i.test(s)) return 'food_eat';
   if (/^Friendly ate food:/i.test(s)) return 'food_eat';
   if (/^Food eaten:/i.test(s)) return 'food_eat';
+  if (/^Gain perk or ailment:/i.test(s)) return 'gained_perk_or_ailment';
+  if (/^Gain perk:/i.test(s)) return 'gained_perk';
   if (/^Friendly gained perk:/i.test(s)) return 'friendly_gained_perk';
   if (/^Friendly gains perk:/i.test(s)) return 'friendly_gained_perk';
+  if (/^Friend lost perk:/i.test(s)) return 'friend_lost_perk';
   if (/^Faint:/i.test(s)) return 'faint';
   if (/^Start of battle:/i.test(s)) return 'start_battle';
+  if (/^Before first attack:/i.test(s)) return 'before_attack';
   if (/^Before attack:/i.test(s)) return 'before_attack';
   if (/^Before battle:/i.test(s)) return 'before_battle';
   if (/^Hurt:/i.test(s)) return 'hurt';
@@ -55,6 +60,8 @@ function parseTrigger(text) {
   if (/^Friend sold:/i.test(s)) return 'friend_sold';
   if (/^Friend bought:/i.test(s)) return 'friend_bought';
   if (/^Friendly toy broke:/i.test(s)) return 'friendly_toy_broke';
+  if (/^Perks are .* in battle/i.test(s)) return 'passive_battle';
+  if (/^Friendly toy repeats/i.test(s)) return 'passive_toy_repeat';
   return 'other';
 }
 
@@ -146,7 +153,19 @@ function main() {
             'friendly_summoned',
             'friend_sold',
             'friend_bought',
+            'friend_bought_tier1',
+            'friend_lost_perk',
+            'gained_perk',
+            'gained_perk_or_ailment',
             'friendly_gained_perk',
+            'friendly_toy_broke',
+            'before_attack',
+            'after_attack',
+            'knock_out',
+            'friend_ahead_attacks',
+            'start_battle',
+            'passive_battle',
+            'passive_toy_repeat',
             'hurt'
           ].includes(trigger)) {
             covered = true;

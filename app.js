@@ -6,7 +6,7 @@ const BOARD_SIZE = 5;
 const PET_SHOP_SIZE = 3;
 const FOOD_SHOP_SIZE = 1;
 const EXTRA_FOOD_SHOP_SIZE = 5;
-const LEVEL_STEPS = [1, 1.5, 2, 2.333, 2.666, 3];
+const LEVEL_STEPS = [1, 1.5, 2, 2.5, 2.75, 3];
 const HEART_ICON = 'assets/sap_textures/Texture2D/Heart.png';
 const FIST_ICON = 'assets/sap_textures/Texture2D/Fist.png';
 const ICE_ICON = 'assets/sap_textures/Texture2D/Icecube.png';
@@ -22,6 +22,132 @@ const ALIASES = {
   sleepingpill: 'pill'
 };
 
+const TEXTURE_ALIASES = {
+  germanshepherd: 'germanshepard',
+  belugawhale: 'belugasturgeon',
+  birdofparadise: 'paradisebird',
+  mantisshrimp: 'shrimpmantis',
+  snappingturtle: 'snappingjawturtle',
+  tahr: 'arabiantahr',
+  wormofsand: 'sandworm',
+  peachofimmortality: 'immortalpeach',
+  waterofyouth: 'youthwater',
+  purplefrog: 'frog',
+  bilby: 'mouse',
+  lemming: 'mouse',
+  lime: 'slime',
+  squash: 'watermelon',
+  bokchoy: 'cucumber',
+  honeydewmelon: 'watermelon',
+  pumpkin: 'watermelon'
+};
+
+const SUPPLEMENTAL_TEXTURE_LOOKUP = {
+  bilby: 'assets/sap_textures/Texture2D/Bilby.png',
+  lemming: 'assets/sap_textures/Texture2D/Lemming.png',
+  purplefrog: 'assets/sap_textures/Texture2D/PurpleFrog.png',
+  lime: 'assets/sap_textures/Texture2D/Lime.png',
+  squash: 'assets/sap_textures/Texture2D/Squash.png',
+  bokchoy: 'assets/sap_textures/Texture2D/BokChoy.png',
+  honeydewmelon: 'assets/sap_textures/Texture2D/HoneydewMelon.png',
+  pumpkin: 'assets/sap_textures/Texture2D/Pumpkin.png'
+};
+
+const DEFAULT_PERK_NOTES = {
+  honey: 'Faint: Summon one 1/1 Bee.',
+  egg: 'Before attack: Deal 2 damage to the target once.',
+  cashewnut: 'Before battle: Deal 1 damage to the second nearest pet ahead (double vs enemies).',
+  strawberry: 'Faint: Give back-most friend +1/+1.',
+  healthpotion: 'Before battle: Give front-most friend +2 health.',
+  grosmichelbanana: 'Before attack: Transform into an Ant.',
+  unagi: 'Before attack: Deal 2 damage to a random enemy.',
+  blueberry: 'Enemy random abilities target this pet first.',
+  macaron: 'Activates after other pets with the same trigger.',
+  nachos: 'Before attack: Convert up to 3 health into attack.',
+  walnut: 'Block 2 damage once.',
+  meatbone: 'Attacks deal +3 damage.',
+  lime: 'Takes 1 less damage.',
+  rice: 'Sell for +2 gold.',
+  caramel: 'Before attack: Combine friendly Caramels to deal 3 damage to healthiest enemy once.',
+  bokchoy: 'When about to faint: Gain +3 health once.',
+  cherries: 'Before battle: Gain 2 trumpets.',
+  chocolatecake: 'Before attack: Gain +3 XP and faint.',
+  faintbread: 'Faint: Summon a random tier 1 faint pet.',
+  fairydust: 'If space ahead is empty: Jump forward and gain +2 mana once.',
+  codroe: 'Faint: Summon a 2/3 Fish.',
+  sudduthtomato: 'Hurt: If still alive, gain +1 permanent health once.',
+  radish: 'Before battle: Gain a random useful perk from this pet tier.',
+  coconut: 'Prevent all damage once.',
+  melon: 'Prevent up to 20 damage once.',
+  garlic: 'Take less damage from attacks.',
+  blackberry: 'Gain +1 attack and +2 health.',
+  croissant: 'End turn: Gain +1 attack.',
+  squash: 'Before attack: Remove 6 attack from target once.',
+  cucumber: 'End turn: Gain +1 health.',
+  fig: 'Before attack: Deal 4 damage to lowest-health enemy once.',
+  whitetruffle: 'Friend faints: Gain +4 attack and jump-attack highest-attack enemy once.',
+  brusselssprout: 'Block being pushed or gain 5 XP once.',
+  cake: 'End turn: Gain +2/+2 until next turn.',
+  pineapple: 'Ability deals +2 extra damage three times.',
+  pie: 'Before battle: Gain +4 attack and +3 health.',
+  salt: 'Attack for double damage once.',
+  baguette: 'Before attack: Remove front enemy perk once.',
+  cheese: 'Attack with at least 15 attack once.',
+  grapes: 'Start of turn: Gain +1 gold.',
+  banana: 'Faint: Summon a 4/4 Monkey.',
+  potato: 'Block 10 damage from abilities/perks twice.',
+  ambrosia: 'Block ailment or 8 damage once.',
+  lovepotion: 'Before battle: Summon a 5/5 copy.',
+  maplesyrup: 'Attack for 50% damage and block 50% damage three times.',
+  donut: 'Friendly random abilities prioritize this pet.',
+  fortunecookie: '50% chance to deal double attack damage.',
+  oystermushroom: 'Before attack: Set stats to at least 9/9 once.',
+  chili: 'Also attack second enemy for 5 damage.',
+  lemon: 'Block 7 damage twice.',
+  carrot: 'End turn: Gain +1/+1.',
+  pepper: 'Health cannot drop below 1 (removed after trigger).',
+  durian: 'Before attack: Remove 33% health from healthiest enemy once.',
+  honeydewmelon: 'Block 10 damage and gain +5 attack once.',
+  mushroom: 'Faint: Revive as 1/1.',
+  steak: 'Attack with +20 damage once.',
+  pancakes: 'Before battle: Give all friends +2/+2.',
+  popcorn: 'Faint: Summon random pet from same tier.',
+  pitabread: 'Faint: Gain +15 health once.',
+  tomato: 'Before attack: Deal 10 damage to last enemy once.',
+  yggdrasilfruit: 'Faint: Summon two 5/5 Nordic Goats.',
+  sardiniancurrant: 'Start of turn: Gain +2 gold.',
+  whiteokra: 'Block 10 damage twice or block one ailment.',
+  peanut: 'Knock out any pet it damages.',
+  peanutbutter: 'Knock out damaged pet once.',
+  rambutan: 'Before attack: Gain +3 mana.',
+  goldenegg: 'Before attack: Deal 6 damage once.',
+  skewer: 'Also attack second and third enemies for 3 damage.'
+};
+
+const PERK_CANONICAL_NAMES = {
+  meatbone: 'Meat Bone',
+  riceball: 'Rice',
+  goldenegg: 'Golden Egg',
+  peanutbutter: 'Peanut Butter',
+  grosmichelbanana: 'Gros Michel Banana',
+  sardiniancurrant: 'Sardinian Currant',
+  whiteokra: 'White Okra',
+  healthpotion: 'Health Potion',
+  cashewnut: 'Cashew Nut',
+  bokchoy: 'Bok Choy',
+  codroe: 'Cod Roe',
+  sudduthtomato: 'Sudduth Tomato',
+  brusselssprout: 'Brussels Sprout',
+  yggdrasilfruit: 'Yggdrasil Fruit',
+  pitabread: 'Pita Bread',
+  honeydewmelon: 'Honeydew Melon',
+  maplesyrup: 'Maple Syrup',
+  whitetruffle: 'White Truffle',
+  lovepotion: 'Love Potion',
+  fortunecookie: 'Fortune Cookie',
+  oystermushroom: 'Oyster Mushroom'
+};
+
 const CALCULATOR_BUNDLE_PATH = 'assets/sap-calculator-sim.js';
 const CALCULATOR_PACK_BY_APP_ID = {
   1: 'Turtle',
@@ -32,6 +158,43 @@ const CALCULATOR_PACK_BY_APP_ID = {
   6: 'Danger'
 };
 const BATTLE_LOG_LIMIT = 140;
+const TRIGGER_DEBUG_LIMIT = 120;
+const MECHANICS_MODE = 'calculator_authoritative';
+const WIKI_REFERENCE_LINKS = {
+  pets: 'https://superautopets.wiki.gg/wiki/Pets',
+  foodPerks: 'https://superautopets.wiki.gg/wiki/Food_Perks',
+  food: 'https://superautopets.wiki.gg/wiki/Food',
+  toys: 'https://superautopets.wiki.gg/wiki/Toys',
+  tokens: 'https://superautopets.wiki.gg/wiki/Tokens',
+  mana: 'https://superautopets.wiki.gg/wiki/Mana',
+  trumpet: 'https://superautopets.wiki.gg/wiki/Trumpet'
+};
+
+const TOY_DEFINITIONS = [
+  { name: 'Balloon', tier: 1, effect: 'Break: Give right-most friend +1/+1 (scales with pet level).', sourcePet: 'Ferret', pack: 'Puppy Pack' },
+  { name: 'Tennis Ball', tier: 1, effect: 'Start of battle: Deal damage to two random enemies (scales with level).', sourcePet: 'Ferret', pack: 'Puppy Pack' },
+  { name: 'Radio', tier: 2, effect: 'Break: Give all friends +health (scales with level).', sourcePet: 'Lemur', pack: 'Puppy Pack' },
+  { name: 'Garlic Press', tier: 2, effect: 'Start of battle: Give right-most friend Garlic perk (scales to multiple friends).', sourcePet: 'Lemur', pack: 'Puppy Pack' },
+  { name: 'Toilet Paper', tier: 3, effect: 'Start of battle: Make first 1-3 enemies Weak.', sourcePet: 'Puppy', pack: 'Puppy Pack' },
+  { name: 'Oven Mitts', tier: 3, effect: 'Break: Stock free Lasagnas (1-3).', sourcePet: 'Puppy', pack: 'Puppy Pack' },
+  { name: 'Melon Helmet', tier: 4, effect: 'Break: Give right-most friends Melon perk.', sourcePet: 'Gharial', pack: 'Golden Pack' },
+  { name: 'Foam Sword', tier: 4, effect: 'Start of battle: Deal 6 damage to image target (scales with level).', sourcePet: 'Gharial', pack: 'Golden Pack' },
+  { name: 'Toy Gun', tier: 4, effect: 'Start of battle: Deal 6 damage to last enemy (scales with level).', sourcePet: 'Gharial', pack: 'Golden Pack' },
+  { name: 'Flashlight', tier: 5, effect: 'Break: Give right-most friend +6/+6 (scales with level).', sourcePet: 'Sting Ray', pack: 'Golden Pack' },
+  { name: 'Stinky Sock', tier: 5, effect: 'Start of battle: Reduce highest-health enemy by 40% (scales with level).', sourcePet: 'Sting Ray', pack: 'Golden Pack' },
+  { name: 'Magic Carpet', tier: '1-3', effect: 'Friend summoned: Gain image attack bonus (scales by level).', sourcePet: 'Sphinx', pack: 'Unicorn Pack' },
+  { name: 'Magic Lamp', tier: '1-3', effect: 'Friendly level-up: Grant image stat bonus (scales by level).', sourcePet: 'Sphinx', pack: 'Unicorn Pack' },
+  { name: 'Winged Sandals', tier: '1-3', effect: 'End turn: Gain 1-3 free rolls next turn.', sourcePet: 'Griffin', pack: 'Unicorn Pack' },
+  { name: 'Treasure Map', tier: '1-3', effect: 'Break: Summon a Treasure Chest.', sourcePet: 'Griffin', pack: 'Unicorn Pack' },
+  { name: 'Treasure Chest', tier: '1-3', effect: 'Break: Stock free pet from Tier 2/4/6.', sourcePet: 'Treasure Map', pack: 'Unicorn Pack' },
+  { name: 'Nutcracker', tier: '1-3', effect: 'All friends fainted: Summon Salmon of Knowledge (scales 6/6 -> 18/18).', sourcePet: 'Fairy', pack: 'Unicorn Pack' },
+  { name: 'Tinder Box', tier: '1-3', effect: 'Empty front space: Summon Giant Eyes Dog (scales 6/6 -> 18/18).', sourcePet: 'Fairy', pack: 'Unicorn Pack' },
+  { name: 'Pandoras Box', tier: '1-3', effect: 'Start of battle: Give all pets random perks and ailments.', sourcePet: 'Bad Dog', pack: 'Unicorn Pack' },
+  { name: 'Evil Book', tier: '1-3', effect: 'Empty front space: Summon Great One (scales damage by level).', sourcePet: 'Bad Dog', pack: 'Unicorn Pack' },
+  { name: 'Excalibur', tier: '1-3', effect: 'End turn: Back-most friend gains scaling stats for 30 turns.', sourcePet: 'Questing Beast', pack: 'Unicorn Pack' },
+  { name: 'Holy Grail', tier: '1-3', effect: 'Break: Summon free Holy Water (1-3).', sourcePet: 'Questing Beast', pack: 'Unicorn Pack' },
+  { name: 'Microwave Oven', tier: '1-3', effect: 'Start of battle: Give Popcorn perk to front-most perkless friends.', sourcePet: 'Vervet', pack: 'Golden Pack' }
+];
 
 const state = {
   gold: START_GOLD,
@@ -64,13 +227,33 @@ const state = {
   toyCatalog: [],
   playerToy: null,
   playerToyLevel: 1,
+  toyChoices: [],
+  toyChoiceContext: null,
   battleReport: null,
   battlePlaybackSkip: false,
   battleInProgress: false,
   textureAudit: null,
   rollsThisTurn: 0,
-  forcedToyName: null,
-  forcedToyLevel: 1
+  level3SoldThisTurn: 0,
+  summonedThisTurn: 0,
+  nameIdAliases: {},
+  perkNotes: { ...DEFAULT_PERK_NOTES },
+  lastToySource: null,
+  toyModalOpen: false,
+  colorBlindMode: false,
+  uiScale: 1,
+  uiFilters: {
+    sort: 'none',
+    query: ''
+  },
+  battleActive: {
+    side: null,
+    idx: -1
+  },
+  toyModalFocusIndex: 0,
+  debugTriggerLog: [],
+  levelHistoryBySlot: Array.from({ length: BOARD_SIZE }, () => []),
+  toyModalCloseTimer: null
 };
 
 const goldValue = document.getElementById('goldValue');
@@ -84,8 +267,17 @@ const restartBtn = document.getElementById('restartBtn');
 const endTurnBtn = document.getElementById('endTurnBtn');
 const statusText = document.getElementById('statusText');
 const packSelect = document.getElementById('packSelect');
-const playerToyInput = document.getElementById('playerToyInput');
-const playerToyLevelInput = document.getElementById('playerToyLevelInput');
+const activeToySlot = document.getElementById('activeToySlot');
+const toyChoiceSlots = document.getElementById('toyChoiceSlots');
+const toyPickerModal = document.getElementById('toyPickerModal');
+const toyPickerTitle = document.getElementById('toyPickerTitle');
+const toyPickerContext = document.getElementById('toyPickerContext');
+const toyPickerCloseBtn = document.getElementById('toyPickerCloseBtn');
+const inventorySlots = document.getElementById('inventorySlots');
+const itemSortSelect = document.getElementById('itemSortSelect');
+const itemFilterInput = document.getElementById('itemFilterInput');
+const colorBlindToggle = document.getElementById('colorBlindToggle');
+const uiZoomRange = document.getElementById('uiZoomRange');
 const tierUpInline = document.getElementById('tierUpInline');
 const tierUpText = document.getElementById('tierUpText');
 const tierUpChoices = document.getElementById('tierUpChoices');
@@ -107,11 +299,31 @@ function normalizeName(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+const TOYS_BY_SOURCE = TOY_DEFINITIONS.reduce((acc, toy) => {
+  const key = normalizeName(toy.sourcePet);
+  if (!acc[key]) acc[key] = [];
+  acc[key].push(toy);
+  return acc;
+}, {});
+
+const TOYS_BY_NAME = TOY_DEFINITIONS.reduce((acc, toy) => {
+  acc[normalizeName(toy.name)] = toy;
+  return acc;
+}, {});
+
 function resolveTexture(name) {
   const raw = String(name || '').trim();
   const key = normalizeName(raw);
   const aliasKey = ALIASES[key];
-  const direct = state.textureLookup[key] || (aliasKey ? state.textureLookup[aliasKey] : null);
+  const textureAliasKey = TEXTURE_ALIASES[key];
+  const nameIdAliasKey = state.nameIdAliases[key];
+  const direct = state.textureLookup[key]
+    || SUPPLEMENTAL_TEXTURE_LOOKUP[key]
+    || (textureAliasKey ? state.textureLookup[textureAliasKey] : null)
+    || (textureAliasKey ? SUPPLEMENTAL_TEXTURE_LOOKUP[textureAliasKey] : null)
+    || (nameIdAliasKey ? state.textureLookup[nameIdAliasKey] : null)
+    || (nameIdAliasKey ? SUPPLEMENTAL_TEXTURE_LOOKUP[nameIdAliasKey] : null)
+    || (aliasKey ? state.textureLookup[aliasKey] : null);
   if (direct) return direct;
 
   // Battle logs sometimes append perk names to pet names (e.g. "Pig Honey").
@@ -175,6 +387,220 @@ function playUiSound(key, volume = 0.75) {
 function updateHud() {
   goldValue.textContent = String(state.gold);
   turnValue.textContent = String(state.turn);
+  renderActiveToyDisplay();
+  renderToyChoiceDisplay();
+  renderInventoryPanel();
+  applyAccessibilitySettings();
+}
+
+function renderActiveToyDisplay() {
+  if (!activeToySlot) return;
+  activeToySlot.innerHTML = '';
+  const toyName = String(state.playerToy || '').trim();
+  if (!toyName) {
+    const empty = document.createElement('div');
+    empty.className = 'name';
+    empty.textContent = 'No Toy';
+    activeToySlot.appendChild(empty);
+    return;
+  }
+  const toy = {
+    name: toyName,
+    tier: getToyMetaByName(toyName)?.tier || 1,
+    path: resolveTexture(toyName)
+  };
+  const card = document.createElement('div');
+  card.className = 'slot toy-slot';
+  bindHoverTooltip(card, 'toy', toy);
+  const media = renderCardImage(toy);
+  const label = document.createElement('div');
+  label.className = 'name';
+  label.textContent = `${toyName} (L${Math.max(1, Math.min(3, Number(state.playerToyLevel || 1)))})`;
+  card.appendChild(media);
+  card.appendChild(label);
+  activeToySlot.appendChild(card);
+}
+
+function selectToyChoice(toyName) {
+  const toy = (state.toyChoices || []).find((t) => normalizeName(t.name) === normalizeName(toyName));
+  if (!toy) return;
+  const petLevel = Math.max(1, Math.min(3, Number(state.toyChoiceContext?.petLevel || 1)));
+  state.playerToy = toy.name;
+  state.playerToyLevel = petLevel;
+  state.lastToySource = state.toyChoiceContext?.sourcePet || null;
+  state.toyChoices = [];
+  state.toyChoiceContext = null;
+  closeToyPickerModal();
+  renderActiveToyDisplay();
+  renderToyChoiceDisplay();
+  renderInventoryPanel();
+  renderBattleReport();
+  setStatus(`Selected toy: ${toy.name} (L${petLevel}).`);
+}
+
+function renderToyChoiceDisplay() {
+  if (!toyChoiceSlots) return;
+  toyChoiceSlots.innerHTML = '';
+  const choices = Array.isArray(state.toyChoices) ? state.toyChoices : [];
+  if (!choices.length) {
+    if (toyPickerContext) {
+      toyPickerContext.textContent = 'No toy choices currently available.';
+    }
+    return;
+  }
+  if (toyPickerTitle) {
+    toyPickerTitle.textContent = 'Pick Your Toy';
+  }
+  if (toyPickerContext) {
+    const source = String(state.toyChoiceContext?.sourcePet || 'Unknown source');
+    const tier = Number(state.toyChoiceContext?.toyLevel || 1);
+    toyPickerContext.textContent = `${source} generated a Tier ${tier} toy. Pick one option.`;
+  }
+
+  choices.forEach((toy) => {
+    const card = document.createElement('div');
+    card.className = 'slot toy-choice-card';
+    if (normalizeName(state.playerToy) === normalizeName(toy.name)) {
+      card.classList.add('selected');
+    }
+    const view = {
+      name: toy.name,
+      tier: toy.tier,
+      path: resolveTexture(toy.name)
+    };
+    bindHoverTooltip(card, 'toy', view);
+    const media = renderCardImage(view);
+    const label = document.createElement('div');
+    label.className = 'name';
+    label.textContent = `${toy.name} (T${toy.tier})`;
+    const btn = document.createElement('button');
+    btn.className = 'toy-choice-use';
+    btn.type = 'button';
+    btn.textContent = 'Use';
+    btn.addEventListener('click', () => selectToyChoice(toy.name));
+    card.tabIndex = 0;
+    card.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        selectToyChoice(toy.name);
+      }
+    });
+    card.appendChild(media);
+    card.appendChild(label);
+    card.appendChild(btn);
+    toyChoiceSlots.appendChild(card);
+  });
+  if (state.toyModalOpen) {
+    focusToyChoiceByIndex(state.toyModalFocusIndex);
+  }
+}
+
+function openToyPickerModal() {
+  if (!toyPickerModal) return;
+  if (state.toyModalCloseTimer) {
+    clearTimeout(state.toyModalCloseTimer);
+    state.toyModalCloseTimer = null;
+  }
+  toyPickerModal.classList.remove('hidden', 'closing');
+  state.toyModalOpen = true;
+  state.toyModalFocusIndex = 0;
+  document.body.classList.add('modal-open');
+  focusToyChoiceByIndex(0);
+}
+
+function closeToyPickerModal() {
+  if (!toyPickerModal) return;
+  if (state.toyModalCloseTimer) {
+    clearTimeout(state.toyModalCloseTimer);
+    state.toyModalCloseTimer = null;
+  }
+  state.toyModalOpen = false;
+  state.toyModalFocusIndex = 0;
+  toyPickerModal.classList.add('closing');
+  state.toyModalCloseTimer = setTimeout(() => {
+    toyPickerModal.classList.add('hidden');
+    toyPickerModal.classList.remove('closing');
+    document.body.classList.remove('modal-open');
+    state.toyModalCloseTimer = null;
+  }, 170);
+}
+
+function isUiModalBlocking() {
+  if (!toyPickerModal) return false;
+  return state.toyModalOpen || toyPickerModal.classList.contains('closing');
+}
+
+function focusToyChoiceByIndex(idx) {
+  if (!toyChoiceSlots) return;
+  const buttons = Array.from(toyChoiceSlots.querySelectorAll('.toy-choice-use'));
+  if (!buttons.length) return;
+  const clamped = Math.max(0, Math.min(buttons.length - 1, Number(idx || 0)));
+  state.toyModalFocusIndex = clamped;
+  const btn = buttons[clamped];
+  if (btn && typeof btn.focus === 'function') {
+    btn.focus();
+  }
+}
+
+function applyAccessibilitySettings() {
+  const root = document.documentElement;
+  if (root) {
+    root.style.setProperty('--ui-scale', String(state.uiScale || 1));
+  }
+  if (document.body) {
+    document.body.classList.toggle('colorblind-mode', Boolean(state.colorBlindMode));
+  }
+}
+
+function renderInventoryPanel() {
+  if (!inventorySlots) return;
+  inventorySlots.innerHTML = '';
+  const list = [];
+  if (state.playerToy) {
+    list.push({
+      kind: 'toy',
+      item: {
+        name: state.playerToy,
+        tier: getToyMetaByName(state.playerToy)?.tier || 1,
+        path: resolveTexture(state.playerToy)
+      },
+      label: `Active toy (L${state.playerToyLevel || 1})`
+    });
+  }
+  const stocked = [
+    ...(state.shopFoods || []).map((slot) => slot.item).filter(Boolean),
+    ...(state.extraShopFoods || []).map((slot) => slot.item).filter(Boolean)
+  ];
+  stocked.slice(0, 4).forEach((food) => {
+    list.push({
+      kind: 'food',
+      item: food,
+      label: 'Stocked food'
+    });
+  });
+  if (!list.length) {
+    const empty = document.createElement('div');
+    empty.className = 'hint';
+    empty.textContent = 'No active toy or stocked food.';
+    inventorySlots.appendChild(empty);
+    return;
+  }
+  list.forEach((entry) => {
+    const card = document.createElement('div');
+    card.className = 'slot inventory-card';
+    bindHoverTooltip(card, entry.kind, entry.item);
+    const media = renderCardImage(entry.item);
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = String(entry.item?.name || 'Unknown');
+    const meta = document.createElement('div');
+    meta.className = 'level-text';
+    meta.textContent = entry.label;
+    card.appendChild(media);
+    card.appendChild(name);
+    card.appendChild(meta);
+    inventorySlots.appendChild(card);
+  });
 }
 
 function stripHtmlToText(raw) {
@@ -184,12 +610,46 @@ function stripHtmlToText(raw) {
   return (tmp.textContent || tmp.innerText || '').trim();
 }
 
+function pushDebugTrigger(triggerName, reason, messages = []) {
+  const lines = Array.isArray(messages)
+    ? messages.map((x) => String(x || '').trim()).filter(Boolean)
+    : [];
+  const row = {
+    ts: new Date().toISOString(),
+    trigger: String(triggerName || 'Unknown'),
+    reason: String(reason || ''),
+    messages: lines
+  };
+  state.debugTriggerLog.push(row);
+  if (state.debugTriggerLog.length > TRIGGER_DEBUG_LIMIT) {
+    state.debugTriggerLog = state.debugTriggerLog.slice(-TRIGGER_DEBUG_LIMIT);
+  }
+  if (lines.length) {
+    console.log(`[MECH:${row.trigger}] ${row.reason}`, lines);
+  } else {
+    console.log(`[MECH:${row.trigger}] ${row.reason}`);
+  }
+}
+
 function renderBattleReport() {
   if (!battleSummary || !battleLog) return;
 
   if (!state.battleReport) {
     battleSummary.textContent = 'No battle yet.';
-    battleLog.textContent = '';
+    const dbg = state.debugTriggerLog.slice(-24);
+    if (!dbg.length) {
+      battleLog.textContent = '';
+      return;
+    }
+    battleLog.textContent = [
+      `Mechanics Mode: ${MECHANICS_MODE}`,
+      `Wiki refs: ${WIKI_REFERENCE_LINKS.pets}`,
+      '',
+      'Recent Trigger Debug:'
+    ].concat(dbg.map((entry, i) => {
+      const detail = entry.messages.length ? ` -> ${entry.messages.join(' | ')}` : '';
+      return `${i + 1}. [${entry.trigger}] ${entry.reason}${detail}`;
+    })).join('\n');
     return;
   }
 
@@ -222,6 +682,15 @@ function renderBattleReport() {
   if (report.logs.length > BATTLE_LOG_LIMIT) {
     lines.push(`... (${report.logs.length - BATTLE_LOG_LIMIT} more logs omitted)`);
   }
+  const dbg = state.debugTriggerLog.slice(-8).map((entry, i) => {
+    const detail = entry.messages.length ? ` -> ${entry.messages.join(' | ')}` : '';
+    return `D${i + 1}. [${entry.trigger}] ${entry.reason}${detail}`;
+  });
+  if (dbg.length) {
+    lines.push('');
+    lines.push('Recent Trigger Debug');
+    lines.push(...dbg);
+  }
   battleLog.textContent = lines.join('\n');
 }
 
@@ -252,6 +721,10 @@ function spawnStatFloat(targetEl, kind, amountOrText) {
     text.textContent = `+${Number(amountOrText || 0)}`;
     tag.appendChild(icon);
     tag.appendChild(text);
+  } else if (kind === 'damage') {
+    tag.textContent = `-${Math.max(0, Number(amountOrText || 0))}`;
+  } else if (kind === 'heal') {
+    tag.textContent = `+${Math.max(0, Number(amountOrText || 0))}`;
   } else {
     tag.textContent = String(amountOrText || 'Perk');
   }
@@ -427,16 +900,20 @@ function animateBattleClash(text, snapshot) {
   const attackerEl = getBattleSlotElement(attackerSide, attackerIdx);
   const defenderEl = getBattleSlotElement(defenderSide, defenderIdx);
   if (!attackerEl || !defenderEl) return;
+  state.battleActive = { side: attackerSide, idx: attackerIdx };
 
   attackerEl.classList.remove('clash-player', 'clash-opponent');
   defenderEl.classList.remove('hit-flash');
   void attackerEl.offsetWidth;
   attackerEl.classList.add(attackerSide === 'player' ? 'clash-player' : 'clash-opponent');
   defenderEl.classList.add('hit-flash');
+  attackerEl.classList.add('active-turn');
   spawnFlyIcon(attackerEl, defenderEl, FIST_ICON, Math.max(1, attack.damage || 1));
+  spawnStatFloat(defenderEl, 'damage', Math.max(1, attack.damage || 1));
   setTimeout(() => {
     attackerEl.classList.remove('clash-player', 'clash-opponent');
     defenderEl.classList.remove('hit-flash');
+    attackerEl.classList.remove('active-turn');
   }, 320);
 }
 
@@ -476,19 +953,13 @@ function extractBattleSnapshot(rawMessage) {
       const slotNum = Number(m[1]);
       if (!Number.isInteger(slotNum) || slotNum < 1 || slotNum > BOARD_SIZE) continue;
       const parsedName = String(m[2] || '').trim();
-      let displayName = parsedName;
-      let perkName = '';
-      const honeySuffix = parsedName.match(/^(.*?)\s+Honey$/i);
-      if (honeySuffix) {
-        displayName = honeySuffix[1].trim();
-        perkName = 'Honey';
-      }
+      const parsed = parseBattleNameAndPerk(parsedName);
       out[slotNum - 1] = {
-        name: displayName,
+        name: parsed.displayName,
         attack: Number(m[3]),
         health: Number(m[4]),
-        equipment: perkName || null,
-        path: resolveTexture(displayName)
+        equipment: parsed.perkName || null,
+        path: resolveTexture(parsed.displayName)
       };
     }
     return out;
@@ -524,24 +995,76 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
       tempBuffs: []
     });
     const initial = side === 'opponent' ? report?.opponentInitialPets?.[i] : report?.playerInitialPets?.[i];
-    const perkName = typeof pet.equipment === 'string'
-      ? pet.equipment
-      : (pet.equipment?.name || (typeof initial?.equipment === 'string' ? initial.equipment : (initial?.equipment?.name || '')));
+    const maxAtk = Math.max(1, Number(initial?.attack || pet.attack || 1));
+    const maxHp = Math.max(1, Number(initial?.health || pet.health || 1));
+    const bars = createBattleStatBars(Number(pet.attack || 0), Number(pet.health || 0), maxAtk, maxHp);
+    const initialExp = Number(initial?.exp ?? 0);
+    const derivedLevel = calcLevelFromExp(initialExp);
+    const levelBadge = document.createElement('div');
+    levelBadge.className = 'battle-level-badge';
+    levelBadge.textContent = `L${Math.max(1, Number(initial?.level || initial?.levelInt || derivedLevel || 1))}`;
+    const perkName = getCanonicalPerkName(
+      typeof pet.equipment === 'string'
+        ? pet.equipment
+        : (pet.equipment?.name || (typeof initial?.equipment === 'string' ? initial.equipment : (initial?.equipment?.name || '')))
+    );
     const perkBadge = createPerkBadgeElement(perkName);
+    const effectsRow = document.createElement('div');
+    effectsRow.className = 'battle-effects-row';
+    if (perkBadge) effectsRow.appendChild(perkBadge);
     const name = document.createElement('div');
     name.className = 'battle-slot-name';
     name.textContent = pet.name;
+    const hoverPet = {
+      name: String(initial?.name || pet.name || ''),
+      tier: Number(initial?.tier || 1),
+      baseAttack: Number(pet.attack || 0),
+      baseHealth: Number(pet.health || 0),
+      tempBuffs: [],
+      levelInt: Math.max(1, Number(initial?.level || initial?.levelInt || 1)),
+      levelValue: Math.max(1, Number(initial?.level || initial?.levelInt || derivedLevel || 1)),
+      ability: initial?.ability || null,
+      equipment: perkName || ''
+    };
+    bindHoverTooltip(el, 'pet', hoverPet);
+    if (state.battleActive.side === side && state.battleActive.idx === i) {
+      el.classList.add('active-turn');
+    }
     el.appendChild(media);
+    el.appendChild(levelBadge);
+    el.appendChild(effectsRow);
     el.appendChild(stats);
+    el.appendChild(bars);
     el.appendChild(name);
-    if (perkBadge) el.appendChild(perkBadge);
     container.appendChild(el);
   }
+}
+
+function createBattleStatBars(attack, health, maxAttack, maxHealth) {
+  const wrap = document.createElement('div');
+  wrap.className = 'battle-stat-bars';
+
+  const atkBar = document.createElement('div');
+  atkBar.className = 'battle-stat-bar attack';
+  const atkFill = document.createElement('span');
+  atkFill.style.width = `${Math.max(0, Math.min(100, Math.round((100 * attack) / Math.max(1, maxAttack))))}%`;
+  atkBar.appendChild(atkFill);
+
+  const hpBar = document.createElement('div');
+  hpBar.className = 'battle-stat-bar health';
+  const hpFill = document.createElement('span');
+  hpFill.style.width = `${Math.max(0, Math.min(100, Math.round((100 * health) / Math.max(1, maxHealth))))}%`;
+  hpBar.appendChild(hpFill);
+
+  wrap.appendChild(atkBar);
+  wrap.appendChild(hpBar);
+  return wrap;
 }
 
 function showBattleScene(report) {
   if (!battleScreen) return;
   state.battlePlaybackSkip = false;
+  state.battleActive = { side: null, idx: -1 };
   battleSceneMeta.textContent = `Turn ${report.turn} | Opponent pack: ${report.opponentPackName}`;
   if (battleSceneLevels) {
     battleSceneLevels.textContent = `Your levels: ${summarizeTeamLevels(report.playerInitialPets) || 'none'} | Opponent levels: ${summarizeTeamLevels(report.opponentInitialPets) || 'none'}`;
@@ -559,6 +1082,7 @@ function showBattleScene(report) {
 
 function hideBattleScene() {
   if (!battleScreen) return;
+  state.battleActive = { side: null, idx: -1 };
   battleScreen.classList.add('hidden');
 }
 
@@ -667,6 +1191,48 @@ function levelStepToInt(stage) {
   return 1;
 }
 
+function formatLevelValue(value) {
+  const n = Number(value || 1);
+  if (!Number.isFinite(n)) return '1';
+  if (Math.abs(n - Math.round(n)) < 0.001) return String(Math.round(n));
+  return String(Math.round(n * 100) / 100);
+}
+
+function getLevelDisplayForExp(exp) {
+  const idx = Math.max(0, Math.min(LEVEL_STEPS.length - 1, Number(exp || 0)));
+  return LEVEL_STEPS[idx];
+}
+
+function pushLevelHistory(slotIdx, pet, reason = 'update') {
+  if (!Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx >= BOARD_SIZE || !pet) return;
+  if (!Array.isArray(state.levelHistoryBySlot[slotIdx])) {
+    state.levelHistoryBySlot[slotIdx] = [];
+  }
+  const row = {
+    turn: Number(state.turn || 1),
+    name: String(pet.name || ''),
+    exp: Math.max(0, Math.min(5, Number(pet.exp || 0))),
+    levelValue: Number(pet.levelValue || getLevelDisplayForExp(pet.exp || 0)),
+    levelInt: Number(pet.levelInt || levelStepToInt(Number(pet.exp || 0))),
+    reason: String(reason || 'update')
+  };
+  const hist = state.levelHistoryBySlot[slotIdx];
+  const last = hist.length ? hist[hist.length - 1] : null;
+  if (
+    last
+    && last.name === row.name
+    && last.exp === row.exp
+    && last.levelValue === row.levelValue
+    && last.levelInt === row.levelInt
+  ) {
+    return;
+  }
+  hist.push(row);
+  if (hist.length > 48) {
+    state.levelHistoryBySlot[slotIdx] = hist.slice(-48);
+  }
+}
+
 function getExpFromPet(pet) {
   if (!pet) return 0;
   if (Number.isInteger(pet.exp)) return pet.exp;
@@ -688,9 +1254,9 @@ function parseToyChoiceLevelFromAbility(abilityText, fallbackLevel = 1) {
   const text = String(abilityText || '').trim();
   if (!text) return 0;
   const explicit = text.match(/Choose one level\s*(\d)\s+[^.]*toy/i);
-  if (explicit) return Math.max(1, Math.min(3, Number(explicit[1])));
+  if (explicit) return Math.max(1, Math.min(6, Number(explicit[1])));
   if (/Choose one [^.]*toy/i.test(text)) {
-    return Math.max(1, Math.min(3, Number(fallbackLevel || 1)));
+    return Math.max(1, Math.min(6, Number(fallbackLevel || 1)));
   }
   return 0;
 }
@@ -746,85 +1312,41 @@ function extractToyCatalogFromCalculatorSource(source) {
 }
 
 function renderToyPickerOptions() {
-  if (!playerToyInput) return;
-  const prior = String(playerToyInput.value || '__auto__');
-  const options = ['<option value="__auto__">Auto (ability/random)</option>'];
-  const sorted = [...(state.toyCatalog || [])]
-    .sort((a, b) => Number(a.tier || 1) - Number(b.tier || 1) || String(a.name).localeCompare(String(b.name)));
-  sorted.forEach((toy) => {
-    const value = String(toy.name || '').trim();
-    if (!value) return;
-    options.push(`<option value="${value}">${value} (T${Number(toy.tier || 1)})</option>`);
-  });
-  playerToyInput.innerHTML = options.join('');
-  const hasPrior = Array.from(playerToyInput.options).some((o) => o.value === prior);
-  playerToyInput.value = hasPrior ? prior : '__auto__';
+  renderActiveToyDisplay();
 }
 
-function getForcedToyChoice() {
-  const selected = String(playerToyInput?.value || '__auto__').trim();
-  if (!selected || selected === '__auto__') return null;
-  const level = Math.max(1, Math.min(3, Number(playerToyLevelInput?.value || 1)));
-  return { name: selected, level };
-}
-
-function getToyPoolForChooser(toyLevel = 1, abilityText = '') {
-  const exactTier = (state.toyCatalog || []).filter((toy) => Number(toy.tier || 1) === Number(toyLevel || 1));
-  if (exactTier.length) return exactTier;
-  const maxTier = maxTierForTurn(state.turn);
-  const available = (state.toyCatalog || []).filter((toy) => Number(toy.tier || 1) <= maxTier);
-  return available.length ? available : (state.toyCatalog || []);
-}
-
-function promptToyChoice(toyLevel, abilityText, petName, triggerLabel) {
-  const forced = getForcedToyChoice();
-  if (forced) {
-    state.forcedToyName = forced.name;
-    state.forcedToyLevel = forced.level;
-    state.playerToy = forced.name;
-    state.playerToyLevel = forced.level;
-    return { name: forced.name, tier: toyLevel };
-  }
-
-  const pool = getToyPoolForChooser(toyLevel, abilityText);
-  if (!pool.length) return null;
-
-  const lines = pool.map((toy, i) => `${i + 1}. ${toy.name} (T${toy.tier})`).join('\n');
-  const msg = [
-    `${petName}: choose one level ${toyLevel} toy (${triggerLabel}).`,
-    'Enter number from list (or leave blank for random):',
-    lines
-  ].join('\n');
-  const raw = window.prompt(msg, '1');
-  if (raw === null) return randFrom(pool);
-  const n = Number(raw.trim());
-  if (!Number.isInteger(n) || n < 1 || n > pool.length) {
-    return randFrom(pool);
-  }
-  return pool[n - 1];
+function getAllowedToyChoicesForSource(sourcePetName, toyTier) {
+  const key = normalizeName(sourcePetName);
+  const pool = TOYS_BY_SOURCE[key] || [];
+  if (!pool.length) return [];
+  const numericTier = Number(toyTier || 1);
+  const exact = pool.filter((toy) => typeof toy.tier === 'number' && Number(toy.tier) === numericTier);
+  if (exact.length) return exact;
+  const ranged = pool.filter((toy) => String(toy.tier) === '1-3');
+  if (ranged.length && numericTier >= 1 && numericTier <= 3) return ranged;
+  return pool;
 }
 
 function chooseAutoToy(toyLevel = 1, abilityText = '', options = {}) {
-  const interactive = Boolean(options?.interactive);
-  const petName = String(options?.petName || 'Pet');
-  const triggerLabel = String(options?.triggerLabel || 'ability');
-  const forced = getForcedToyChoice();
-  if (forced) {
-    state.forcedToyName = forced.name;
-    state.forcedToyLevel = forced.level;
-    state.playerToy = forced.name;
-    state.playerToyLevel = forced.level;
-    return { name: forced.name, tier: 1 };
+  const petName = String(options?.petName || '').trim();
+  const pool = getAllowedToyChoicesForSource(petName, toyLevel);
+  state.toyChoices = [...pool];
+  state.toyChoiceContext = {
+    sourcePet: petName || '',
+    toyLevel: Number(toyLevel || 1),
+    petLevel: Math.max(1, Math.min(3, Number(options?.petLevel || 1))),
+    triggerLabel: String(options?.triggerLabel || 'ability')
+  };
+  renderToyChoiceDisplay();
+  if (!pool.length) return null;
+  if (pool.length === 1) {
+    selectToyChoice(pool[0].name);
+    return pool[0];
   }
-  if (!Array.isArray(state.toyCatalog) || !state.toyCatalog.length) return null;
-  const pool = getToyPoolForChooser(toyLevel, abilityText);
-  const chosen = interactive
-    ? (promptToyChoice(toyLevel, abilityText, petName, triggerLabel) || randFrom(pool))
-    : randFrom(pool);
-  if (!chosen) return null;
-  state.playerToy = chosen.name;
-  state.playerToyLevel = Math.max(1, Math.min(3, Number(toyLevel || 1)));
-  return chosen;
+  // Always show modal for multi-choice toy events so selection is explicit.
+  openToyPickerModal();
+  setStatus(`Choose a toy from ${petName || 'this source'} in the popup.`);
+  return null;
 }
 
 function maybeChooseToyFromPetAbility(pet, level = getPetLevelInt(pet), options = {}) {
@@ -836,17 +1358,37 @@ function maybeChooseToyFromPetAbility(pet, level = getPetLevelInt(pet), options 
   if (trigger === 'buy' && !/^Buy:/i.test(abilityText)) return null;
   if (trigger === 'sell' && !/^Sell:/i.test(abilityText)) return null;
   return chooseAutoToy(toyLevel, abilityText, {
-    interactive: Boolean(options?.interactive),
-    petName: pet?.name || 'Pet',
+    petName: pet?.name || '',
+    petLevel: level,
     triggerLabel: options?.triggerLabel || 'ability'
   });
+}
+
+function openToyPickerFromPetInteraction(boardIdx) {
+  const pet = state.board[boardIdx];
+  if (!pet) return;
+  const level = getPetLevelInt(pet);
+  const abilityText = getPetAbilityText(pet, level);
+  const toyLevel = parseToyChoiceLevelFromAbility(abilityText, level);
+  if (!toyLevel) {
+    setStatus(`${pet.name} has no toy choice ability right now.`);
+    return;
+  }
+  const chosen = chooseAutoToy(toyLevel, abilityText, {
+    petName: pet.name,
+    petLevel: level,
+    triggerLabel: 'interaction'
+  });
+  if (chosen) {
+    setStatus(`${pet.name}: selected ${chosen.name}.`);
+  }
 }
 
 function hydrateLevelFields(pet, exp) {
   const clamped = Math.max(0, Math.min(exp, 5));
   pet.exp = clamped;
   pet.mergeStage = clamped;
-  pet.levelValue = LEVEL_STEPS[clamped];
+  pet.levelValue = getLevelDisplayForExp(clamped);
   pet.levelInt = levelStepToInt(clamped);
   return pet;
 }
@@ -932,33 +1474,75 @@ function bumpPetLevelByExp(pet, gainedExp) {
 
 function tooltipTextForPet(pet) {
   const temp = getActiveTempBuffTotals(pet);
-  const perk = typeof pet?.equipment === 'string'
-    ? pet.equipment
-    : (pet?.equipment?.name || '');
+  const perk = getPetPerkName(pet);
+  const perkNote = getPerkNoteForName(perk);
+  const atkNow = getPetDisplayAttack(pet);
+  const hpNow = getPetDisplayHealth(pet);
+  const lvlInt = pet.levelInt ?? 1;
+  const abilityPreview = getPetAbilityText(pet, lvlInt);
   return {
-    title: `${pet.name} (Tier ${pet.tier})`,
-    atk: `${getPetDisplayAttack(pet)}`,
-    hp: `${getPetDisplayHealth(pet)}`,
+    title: `${pet.name} (Tier ${pet.tier || '?'})`,
+    atk: `${atkNow}`,
+    hp: `${hpNow}`,
     lines: [
       `Level ${pet.levelInt ?? 1} (${pet.levelValue ?? LEVEL_STEPS[0]})`,
+      `Level Value: ${formatLevelValue(pet.levelValue ?? getLevelDisplayForExp(pet.exp ?? 0))}`,
       perk ? `Perk: ${perk}` : 'Perk: none',
       temp.atk || temp.hp ? `Temporary: +${temp.atk}/+${temp.hp} until next turn` : 'Temporary: none',
+      `Preview: Attacks for ${atkNow}, survives up to ${hpNow} damage.`,
+      abilityPreview ? `Active Ability: ${abilityPreview}` : '',
       `L1: ${pet.ability?.level1 || 'N/A'}`,
       `L2: ${pet.ability?.level2 || 'N/A'}`,
-      `L3: ${pet.ability?.level3 || 'N/A'}`
+      `L3: ${pet.ability?.level3 || 'N/A'}`,
+      perk ? `Perk Ability: ${perkNote || 'Unknown'}` : 'Perk Ability: none',
+      `Source: ${WIKI_REFERENCE_LINKS.pets}`,
+      (() => {
+        const idx = state.board.findIndex((x) => x === pet);
+        if (idx < 0) return '';
+        const h = state.levelHistoryBySlot[idx] || [];
+        if (!h.length) return '';
+        const tail = h.slice(-3).map((row) => `T${row.turn}:${formatLevelValue(row.levelValue)}`).join(', ');
+        return `Level History: ${tail}`;
+      })()
     ]
+      .filter(Boolean)
   };
 }
 
 function tooltipTextForFood(food) {
   const perkName = parsePerkFromText(food?.ability || '');
+  const perkNote = perkName ? getPerkNoteForName(perkName) : '';
   return {
     title: `${food.name} (Tier ${food.tier})`,
     atk: null,
     hp: null,
     lines: [
       `Type: ${perkName ? `Perk Food (${perkName})` : 'Food (one-time effect)'}`,
-      `Ability: ${food.ability || 'N/A'}`
+      `Ability: ${food.ability || 'N/A'}`,
+      perkName ? `Perk Ability: ${perkNote || 'Unknown'}` : '',
+      `Source: ${WIKI_REFERENCE_LINKS.food}${perkName ? ` | ${WIKI_REFERENCE_LINKS.foodPerks}` : ''}`
+    ]
+      .filter(Boolean)
+  };
+}
+
+function getToyMetaByName(toyName = '') {
+  return TOYS_BY_NAME[normalizeName(toyName)] || null;
+}
+
+function tooltipTextForToy(toy) {
+  const name = String(toy?.name || '').trim();
+  const meta = getToyMetaByName(name);
+  const tierText = (meta && meta.tier !== undefined) ? String(meta.tier) : String(toy?.tier || 1);
+  return {
+    title: `${name || 'No Toy'} (Tier ${tierText})`,
+    atk: null,
+    hp: null,
+    lines: [
+      `Source: ${meta?.sourcePet || 'Unknown'}`,
+      `Pack: ${meta?.pack || 'Unknown'}`,
+      `Effect: ${meta?.effect || 'No effect text available.'}`,
+      `Source Ref: ${WIKI_REFERENCE_LINKS.toys}`
     ]
   };
 }
@@ -1051,7 +1635,11 @@ function bindHoverTooltip(el, kind, item) {
   if (!item) return;
 
   const onEnter = (ev) => {
-    const data = kind === 'pet' ? tooltipTextForPet(item) : tooltipTextForFood(item);
+    const data = kind === 'pet'
+      ? tooltipTextForPet(item)
+      : kind === 'toy'
+        ? tooltipTextForToy(item)
+        : tooltipTextForFood(item);
     setTooltipContent(data);
     hoverTooltip.classList.remove('hidden');
     positionTooltip(ev);
@@ -1130,17 +1718,23 @@ function createPetStatsElement(pet) {
 function createPerkBadgeElement(perkName) {
   if (!perkName) return null;
   const tex = resolveTexture(perkName);
-  if (!tex) return null;
   const badge = document.createElement('div');
   badge.className = 'perk-overlay';
   if (normalizeName(perkName) === 'honey') {
     badge.classList.add('perk-honey');
   }
   badge.title = perkName;
-  const img = document.createElement('img');
-  img.src = tex;
-  img.alt = perkName;
-  badge.appendChild(img);
+  if (tex) {
+    const img = document.createElement('img');
+    img.src = tex;
+    img.alt = perkName;
+    badge.appendChild(img);
+  } else {
+    badge.classList.add('perk-text');
+    const text = document.createElement('span');
+    text.textContent = String(perkName).slice(0, 3).toUpperCase();
+    badge.appendChild(text);
+  }
   return badge;
 }
 
@@ -1188,9 +1782,99 @@ function parseSinglePetBuffText(abilityText) {
 function parsePerkFromText(abilityText) {
   const text = String(abilityText || '').trim();
   const perk = text.match(/Give one pet(?: the)? ([A-Za-z0-9' -]+?) perk\.?/i);
-  if (perk) return perk[1].trim();
-  if (/Give one pet Strawberry\.?/i.test(text)) return 'Strawberry';
+  if (perk) return getCanonicalPerkName(perk[1].trim());
+  if (/Give one pet Strawberry\.?/i.test(text)) return getCanonicalPerkName('Strawberry');
   return null;
+}
+
+function normalizePerkNameKey(perkName) {
+  return normalizeName(String(perkName || '').replace(/\s*\([^)]*\)\s*$/, '').trim());
+}
+
+function getCanonicalPerkName(perkName) {
+  const raw = String(perkName || '').trim();
+  if (!raw) return '';
+  const key = normalizePerkNameKey(raw);
+  return PERK_CANONICAL_NAMES[key] || raw;
+}
+
+function getPetPerkName(pet) {
+  if (!pet) return '';
+  const raw = typeof pet.equipment === 'string'
+    ? pet.equipment
+    : (pet.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : '');
+  return getCanonicalPerkName(raw);
+}
+
+function getPerkNoteForName(perkName) {
+  const key = normalizePerkNameKey(perkName);
+  if (!key) return '';
+  return String(state.perkNotes[key] || DEFAULT_PERK_NOTES[key] || '');
+}
+
+function extractNameIdAliasesFromCalculatorSource(source) {
+  const aliases = {};
+  const rx = /Name:\s*"([^"]+)"[\s\S]{0,220}?NameId:\s*"([^"]+)"/g;
+  let m;
+  while ((m = rx.exec(source)) !== null) {
+    const nameKey = normalizeName(m[1]);
+    const idKey = normalizeName(m[2]);
+    if (!nameKey || !idKey || nameKey === idKey) continue;
+    aliases[nameKey] = idKey;
+  }
+  return aliases;
+}
+
+function extractPerkNotesFromCalculatorSource(source) {
+  const notes = {};
+  const rx = /Ability:\s*"Give one pet(?: the)? [^"]+?(?:perk\.?|Strawberry\.?)"[\s\S]{0,520}?Name:\s*"([^"]+)"[\s\S]{0,220}?PerkNote:\s*"([^"]+)"/g;
+  let m;
+  while ((m = rx.exec(source)) !== null) {
+    const nameKey = normalizePerkNameKey(m[1]);
+    const note = String(m[2] || '').trim();
+    if (!nameKey || !note) continue;
+    notes[nameKey] = note;
+  }
+  return notes;
+}
+
+function escapeRegex(text) {
+  return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getKnownPerkNames() {
+  const names = new Set();
+  getAllFoodsAcrossPacks().forEach((food) => {
+    const perkName = parsePerkFromText(food?.ability || '');
+    if (perkName) names.add(String(perkName).trim());
+  });
+  Object.keys(DEFAULT_PERK_NOTES).forEach((key) => {
+    const canonical = PERK_CANONICAL_NAMES[key];
+    if (canonical) names.add(String(canonical));
+    else names.add(String(key));
+  });
+  names.add('Honey');
+  return Array.from(names)
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+}
+
+function parseBattleNameAndPerk(parsedName) {
+  const raw = String(parsedName || '').trim();
+  if (!raw) return { displayName: '', perkName: '' };
+  const fullTexture = resolveTexture(raw);
+  const perkNames = getKnownPerkNames();
+  for (const perkName of perkNames) {
+    const m = raw.match(new RegExp(`^(.*?)\\s+${escapeRegex(perkName)}$`, 'i'));
+    if (!m) continue;
+    const displayName = String(m[1] || '').trim();
+    if (!displayName) continue;
+    const baseTexture = resolveTexture(displayName);
+    if (baseTexture || !fullTexture) {
+      return { displayName, perkName };
+    }
+  }
+  return { displayName: raw, perkName: '' };
 }
 
 function parseExperienceFromText(abilityText) {
@@ -1235,7 +1919,13 @@ function foodNeedsTarget(food) {
 function setPetPerk(idx, perkName, sourceEl = null) {
   const pet = state.board[idx];
   if (!pet || !perkName) return;
-  pet.equipment = perkName;
+  const previousPerk = getPetPerkName(pet);
+  const nextPerk = getCanonicalPerkName(perkName);
+  if (!nextPerk) return;
+  if (useCalculatorShopBridge() && previousPerk && normalizeName(previousPerk) !== normalizeName(nextPerk)) {
+    triggerCalculatorPerkLost(idx, previousPerk);
+  }
+  pet.equipment = nextPerk;
   if (useCalculatorShopBridge()) {
     triggerCalculatorPerkGained(idx, perkName);
   }
@@ -1594,6 +2284,15 @@ async function loadCalculatorSim() {
     throw new Error(`Calculator bundle load failed: ${res.status}`);
   }
   const source = await res.text();
+  state.nameIdAliases = {
+    ...state.nameIdAliases,
+    ...extractNameIdAliasesFromCalculatorSource(source)
+  };
+  state.perkNotes = {
+    ...DEFAULT_PERK_NOTES,
+    ...state.perkNotes,
+    ...extractPerkNotesFromCalculatorSource(source)
+  };
   const catalog = extractToyCatalogFromCalculatorSource(source);
   if (catalog.length) state.toyCatalog = catalog;
   renderToyPickerOptions();
@@ -1627,6 +2326,7 @@ function boardPetToCalculatorPet(pet) {
   if (!pet) return null;
   const temp = getActiveTempBuffTotals(pet);
   const levelInt = getPetLevelInt(pet);
+  const expValue = Number.isInteger(pet.exp) ? pet.exp : calcExpForLevel(levelInt);
   const equipment = typeof pet.equipment === 'string'
     ? pet.equipment
     : (pet.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : null);
@@ -1634,7 +2334,9 @@ function boardPetToCalculatorPet(pet) {
     name: pet.name,
     attack: Math.max(1, Number(pet.baseAttack || 0) + temp.atk),
     health: Math.max(1, Number(pet.baseHealth || 0) + temp.hp),
-    exp: Number.isInteger(pet.exp) ? pet.exp : calcExpForLevel(levelInt),
+    exp: expValue,
+    level: levelInt,
+    levelInt,
     mana: Math.max(0, Number(pet.mana || 0)),
     equipment: equipment || null
   };
@@ -1648,17 +2350,40 @@ function summarizeTeamLevels(pets) {
 }
 
 function parseToyConfigFromUi() {
-  const forced = getForcedToyChoice();
-  const toyName = String(forced?.name || state.playerToy || '').trim();
-  const toyLevel = Math.max(1, Math.min(3, Number(forced?.level || state.playerToyLevel || 1)));
+  const toyName = String(state.playerToy || '').trim();
+  const toyLevel = Math.max(1, Math.min(3, Number(state.playerToyLevel || 1)));
   return {
     playerToy: toyName || null,
     playerToyLevel: toyName ? toyLevel : 1
   };
 }
 
+function getBridgeGameCounters() {
+  return {
+    playerRollAmount: Math.max(0, Number(state.rollsThisTurn || 0)),
+    playerGoldSpent: Math.max(0, START_GOLD - state.gold),
+    playerLevel3Sold: Math.max(0, Number(state.level3SoldThisTurn || 0)),
+    playerSummonedAmount: Math.max(0, Number(state.summonedThisTurn || 0))
+  };
+}
+
+function syncBridgeCountersFromGameApi(gameApi) {
+  if (!gameApi || typeof gameApi !== 'object') return;
+  state.level3SoldThisTurn = Math.max(0, Number(gameApi.playerLevel3Sold || state.level3SoldThisTurn || 0));
+  state.summonedThisTurn = Math.max(0, Number(gameApi.playerSummonedAmount || state.summonedThisTurn || 0));
+}
+
+function isAuthoritativeMechanicsReady() {
+  return Boolean(
+    state.calculatorSim
+    && typeof state.calculatorSim.runHeadlessSimulation === 'function'
+    && typeof state.calculatorSim.__createSimulationRunner === 'function'
+    && typeof state.calculatorSim.LogService === 'function'
+  );
+}
+
 function useCalculatorShopBridge() {
-  return state.currentPackId >= 1 && state.currentPackId <= 6;
+  return state.currentPackId >= 1 && state.currentPackId <= 6 && isAuthoritativeMechanicsReady();
 }
 
 function boardPetToShopCalcPetConfig(pet) {
@@ -1796,8 +2521,22 @@ function hydrateBoardFromCalcPet(calcPet) {
 
 function syncBoardStateFromCalculatorPlayer(player) {
   if (!player) return;
+  const prevBoard = Array.isArray(state.board) ? state.board.map((p) => (p ? { ...p } : null)) : [];
   for (let i = 0; i < BOARD_SIZE; i += 1) {
-    state.board[i] = hydrateBoardFromCalcPet(player.getPet(i));
+    const next = hydrateBoardFromCalcPet(player.getPet(i));
+    const prev = prevBoard[i];
+    if (next && prev && normalizeName(prev.name) === normalizeName(next.name)) {
+      const prevExp = Math.max(0, Math.min(5, Number(prev.exp || 0)));
+      const nextExp = Math.max(0, Math.min(5, Number(next.exp || 0)));
+      if (nextExp < prevExp) {
+        // Guard against accidental exp regressions during bridge sync.
+        hydrateLevelFields(next, prevExp);
+      }
+    }
+    state.board[i] = next;
+    if (state.board[i]) {
+      pushLevelHistory(i, state.board[i], 'calculator_sync');
+    }
   }
   state.gold = Math.max(0, Number.isFinite(Number(player.gold)) ? Number(player.gold) : state.gold);
   if (player.toy?.name) {
@@ -1812,6 +2551,7 @@ function syncBoardStateFromCalculatorPlayer(player) {
 function createCalculatorShopContext() {
   const sim = state.calculatorSim;
   if (!sim || typeof sim.__createSimulationRunner !== 'function' || typeof sim.LogService !== 'function') {
+    pushDebugTrigger('BridgeInit', 'Calculator simulation runtime unavailable.');
     return null;
   }
 
@@ -1820,10 +2560,14 @@ function createCalculatorShopContext() {
   if (typeof logService.setDeferDecorations === 'function') logService.setDeferDecorations(true);
 
   const runner = sim.__createSimulationRunner(logService);
-  if (!runner) return null;
+  if (!runner) {
+    pushDebugTrigger('BridgeInit', 'Failed to create simulation runner.');
+    return null;
+  }
 
   const packName = CALCULATOR_PACK_BY_APP_ID[state.currentPackId] || 'Turtle';
   const blankTeam = Array(BOARD_SIZE).fill(null);
+  const counters = getBridgeGameCounters();
   runner.setupGameEnvironment({
     turn: state.turn,
     simulationCount: 1,
@@ -1831,12 +2575,14 @@ function createCalculatorShopContext() {
     opponentPack: packName,
     playerPets: blankTeam,
     opponentPets: blankTeam,
-    playerGoldSpent: Math.max(0, START_GOLD - state.gold),
+    playerGoldSpent: counters.playerGoldSpent,
     opponentGoldSpent: 10,
-    playerRollAmount: Math.max(0, Number(state.rollsThisTurn || 0)),
+    playerRollAmount: counters.playerRollAmount,
     opponentRollAmount: 0,
-    playerLevel3Sold: 0,
-    opponentLevel3Sold: 0
+    playerLevel3Sold: counters.playerLevel3Sold,
+    opponentLevel3Sold: 0,
+    playerSummonedAmount: counters.playerSummonedAmount,
+    opponentSummonedAmount: 0
   });
 
   const player = runner.player;
@@ -1853,13 +2599,23 @@ function createCalculatorShopContext() {
     const calcPet = player.getPet(i);
     if (!source || !calcPet || !source.calcPetState) continue;
     restoreCalcPetState(calcPet, source.calcPetState);
+    // Always keep core combat/level fields sourced from current board config.
+    const cfg = petConfigs[i];
+    if (cfg) {
+      calcPet.attack = Math.max(1, Number(cfg.attack || calcPet.attack || 1));
+      calcPet.health = Math.max(1, Number(cfg.health || calcPet.health || 1));
+      calcPet.exp = Math.max(0, Math.min(5, Number(cfg.exp || calcPet.exp || 0)));
+      calcPet.mana = Math.max(0, Number(cfg.mana || calcPet.mana || 0));
+    }
   }
 
   player.gold = Number(state.gold || 0);
   runner.gameService.gameApi.playerLostLastBattle = Boolean(state.lastBattleLost);
   runner.gameService.gameApi.opponentLostLastBattle = false;
-  runner.gameService.gameApi.playerRollAmount = Math.max(0, Number(state.rollsThisTurn || 0));
-  runner.gameService.gameApi.playerGoldSpent = Math.max(0, START_GOLD - state.gold);
+  runner.gameService.gameApi.playerRollAmount = counters.playerRollAmount;
+  runner.gameService.gameApi.playerGoldSpent = counters.playerGoldSpent;
+  runner.gameService.gameApi.playerLevel3Sold = counters.playerLevel3Sold;
+  runner.gameService.gameApi.playerSummonedAmount = counters.playerSummonedAmount;
 
   const toyCfg = parseToyConfigFromUi();
   if (toyCfg.playerToy) {
@@ -1912,6 +2668,8 @@ function collectCalculatorLogMessages(logService, baseline = 0) {
 function triggerCalculatorStartTurn() {
   const ctx = createCalculatorShopContext();
   if (!ctx) return [];
+  state.level3SoldThisTurn = 0;
+  state.summonedThisTurn = 0;
   state.board.forEach((pet) => {
     if (!pet) return;
     maybeChooseToyFromPetAbility(pet, getPetLevelInt(pet), {
@@ -1928,8 +2686,11 @@ function triggerCalculatorStartTurn() {
     aq.triggerAbility(pet, 'StartTurn', pet);
   });
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   syncBoardStateFromCalculatorPlayer(ctx.player);
-  return collectCalculatorLogMessages(ctx.logService, beforeLen);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('StartTurn', 'Triggered all StartTurn abilities in authoritative engine.', out);
+  return out;
 }
 
 function triggerCalculatorEndTurn() {
@@ -1951,8 +2712,11 @@ function triggerCalculatorEndTurn() {
     ctx.runner.abilityService.initSpecialEndTurnAbility(ctx.player);
   }
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   syncBoardStateFromCalculatorPlayer(ctx.player);
-  return collectCalculatorLogMessages(ctx.logService, beforeLen);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('EndTurn', 'Triggered all EndTurn abilities in authoritative engine.', out);
+  return out;
 }
 
 function triggerCalculatorBuy(boardIdx) {
@@ -1971,6 +2735,7 @@ function triggerCalculatorBuy(boardIdx) {
     });
     applyCurrentToyToCalculatorPlayer(ctx);
   }
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.player.petArray.forEach((pet) => {
     if (pet === boughtPet) {
       aq.triggerAbility(pet, 'ThisBought', boughtPet);
@@ -1988,7 +2753,10 @@ function triggerCalculatorBuy(boardIdx) {
     }
   });
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('Buy', `Buy trigger for slot ${boardIdx + 1}.`, out);
 }
 
 function triggerCalculatorSell(boardIdx) {
@@ -1998,6 +2766,10 @@ function triggerCalculatorSell(boardIdx) {
   if (!aq) return;
   const soldPet = ctx.player.getPet(boardIdx);
   if (!soldPet) return;
+  if (Math.max(0, Math.min(5, Number(soldPet.exp || 0))) >= 5) {
+    state.level3SoldThisTurn += 1;
+    ctx.runner.gameService.gameApi.playerLevel3Sold = Math.max(0, Number(state.level3SoldThisTurn || 0));
+  }
   const boardPet = state.board[boardIdx];
   if (boardPet) {
     maybeChooseToyFromPetAbility(boardPet, getPetLevelInt(boardPet), {
@@ -2007,6 +2779,7 @@ function triggerCalculatorSell(boardIdx) {
     });
     applyCurrentToyToCalculatorPlayer(ctx);
   }
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.player.petArray.forEach((pet) => {
     if (pet === soldPet) {
       aq.triggerAbility(pet, 'ThisSold', soldPet);
@@ -2021,8 +2794,11 @@ function triggerCalculatorSell(boardIdx) {
     );
   });
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   ctx.player.setPet(boardIdx, undefined, false);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('Sell', `Sell trigger for slot ${boardIdx + 1}.`, out);
 }
 
 function triggerCalculatorSpendGold(amount) {
@@ -2032,6 +2808,7 @@ function triggerCalculatorSpendGold(amount) {
   if (!ctx) return;
   const aq = ctx.runner.abilityService?.abilityQueueService;
   if (!aq) return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   for (let i = 0; i < spend; i += 1) {
     ctx.player.petArray.forEach((pet) => {
       aq.triggerAbility(pet, 'SpendGold', pet, { trigger: 'SpendGold' });
@@ -2044,7 +2821,10 @@ function triggerCalculatorSpendGold(amount) {
     });
   }
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('SpendGold', `SpendGold x${spend}.`, out);
 }
 
 function triggerCalculatorRoll() {
@@ -2052,6 +2832,7 @@ function triggerCalculatorRoll() {
   if (!ctx) return;
   const aq = ctx.runner.abilityService?.abilityQueueService;
   if (!aq) return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.player.petArray.forEach((pet) => {
     aq.triggerAbility(pet, 'Roll', pet, { trigger: 'Roll' });
     aq.handleNumberedCounterTriggers(
@@ -2062,7 +2843,10 @@ function triggerCalculatorRoll() {
     );
   });
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('Roll', 'Roll trigger processed.', out);
 }
 
 function triggerCalculatorFoodEaten(boardIdx, foodName = '') {
@@ -2071,9 +2855,13 @@ function triggerCalculatorFoodEaten(boardIdx, foodName = '') {
   const eater = ctx.player.getPet(boardIdx);
   if (!eater) return;
   if (typeof ctx.runner.abilityService?.triggerFoodEvents !== 'function') return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.runner.abilityService.triggerFoodEvents(eater, String(foodName || '').trim() || undefined);
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('FoodEaten', `Food event for slot ${boardIdx + 1}: ${foodName || 'unknown food'}.`, out);
 }
 
 function triggerCalculatorPerkGained(boardIdx, perkName = '') {
@@ -2082,9 +2870,28 @@ function triggerCalculatorPerkGained(boardIdx, perkName = '') {
   const pet = ctx.player.getPet(boardIdx);
   if (!pet) return;
   if (typeof ctx.runner.abilityService?.triggerPerkGainEvents !== 'function') return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.runner.abilityService.triggerPerkGainEvents(pet, String(perkName || '').trim() || undefined);
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('PerkGain', `Perk gained at slot ${boardIdx + 1}: ${perkName || 'unknown perk'}.`, out);
+}
+
+function triggerCalculatorPerkLost(boardIdx, perkName = '') {
+  const ctx = createCalculatorShopContext();
+  if (!ctx) return;
+  const pet = ctx.player.getPet(boardIdx);
+  if (!pet) return;
+  if (typeof ctx.runner.abilityService?.triggerPerkLossEvents !== 'function') return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
+  ctx.runner.abilityService.triggerPerkLossEvents(pet, String(perkName || '').trim() || undefined);
+  runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
+  syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('PerkLoss', `Perk lost at slot ${boardIdx + 1}: ${perkName || 'unknown perk'}.`, out);
 }
 
 function triggerCalculatorHurt(boardIdx, damageAmount = 1) {
@@ -2094,9 +2901,12 @@ function triggerCalculatorHurt(boardIdx, damageAmount = 1) {
   const pet = ctx.player.getPet(boardIdx);
   if (!pet) return;
   if (typeof ctx.runner.abilityService?.triggerHurtEvents !== 'function') return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.runner.abilityService.triggerHurtEvents(pet, dmg);
   runCalculatorAbilityQueue(ctx.runner);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('Hurt', `Hurt trigger at slot ${boardIdx + 1} for ${dmg}.`, out);
 }
 
 function triggerCalculatorSummon(boardIdx) {
@@ -2105,9 +2915,12 @@ function triggerCalculatorSummon(boardIdx) {
   const summoned = ctx.player.getPet(boardIdx);
   if (!summoned) return;
   if (typeof ctx.runner.abilityService?.triggerSummonEvents !== 'function') return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.runner.abilityService.triggerSummonEvents(summoned);
   runCalculatorAbilityQueue(ctx.runner);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('Summon', `Summon trigger at slot ${boardIdx + 1}.`, out);
 }
 
 function triggerCalculatorLevelUp(boardIdx) {
@@ -2116,9 +2929,12 @@ function triggerCalculatorLevelUp(boardIdx) {
   const leveled = ctx.player.getPet(boardIdx);
   if (!leveled) return;
   if (typeof ctx.runner.abilityService?.triggerLevelUpEvents !== 'function') return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.runner.abilityService.triggerLevelUpEvents(leveled);
   runCalculatorAbilityQueue(ctx.runner);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('LevelUp', `LevelUp trigger at slot ${boardIdx + 1}.`, out);
 }
 
 function triggerCalculatorFaint(boardIdx) {
@@ -2126,14 +2942,18 @@ function triggerCalculatorFaint(boardIdx) {
   if (!ctx) return;
   const fainted = ctx.player.getPet(boardIdx);
   if (!fainted) return;
+  const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   if (typeof ctx.runner.abilityService?.triggerFaintEvents !== 'function') return;
   ctx.runner.abilityService.triggerFaintEvents(fainted);
   if (typeof ctx.runner.abilityService?.triggerAfterFaintEvents === 'function') {
     ctx.runner.abilityService.triggerAfterFaintEvents(fainted);
   }
   runCalculatorAbilityQueue(ctx.runner);
+  syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
   ctx.player.setPet(boardIdx, undefined, false);
   syncBoardStateFromCalculatorPlayer(ctx.player);
+  const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  pushDebugTrigger('Faint', `Faint trigger at slot ${boardIdx + 1}.`, out);
 }
 
 function inferAilmentFromText(text) {
@@ -2205,7 +3025,7 @@ function countBattlePhases(logs) {
 }
 
 function simulateBattleOnce() {
-  if (!state.calculatorSim || typeof state.calculatorSim.runHeadlessSimulation !== 'function') {
+  if (!isAuthoritativeMechanicsReady()) {
     throw new Error('Calculator simulation API unavailable.');
   }
 
@@ -2249,6 +3069,11 @@ function simulateBattleOnce() {
     phaseCounts: countBattlePhases(logs)
   };
   state.lastBattleLost = winner === 'opponent';
+  pushDebugTrigger(
+    'BattleSim',
+    `Battle simulated via ${MECHANICS_MODE}. Source refs: pets/perks/food/toys/tokens/mana/trumpet wiki.`,
+    logs.slice(0, 12).map((x) => stripHtmlToText(x?.message || '')).filter(Boolean)
+  );
   renderBattleReport();
   return state.battleReport;
 }
@@ -2485,6 +3310,47 @@ function executeEndOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
   return logs;
 }
 
+function applyManualStartTurnPerk(idx) {
+  const pet = state.board[idx];
+  if (!pet) return [];
+  const logs = [];
+  const perkKey = normalizePerkNameKey(getPetPerkName(pet));
+  if (!perkKey) return logs;
+
+  if (perkKey === 'grapes') {
+    state.gold += 1;
+    logs.push(`${pet.name} (${getPetPerkName(pet)}): +1 gold`);
+  } else if (perkKey === 'sardiniancurrant') {
+    state.gold += 2;
+    logs.push(`${pet.name} (${getPetPerkName(pet)}): +2 gold`);
+  }
+  return logs;
+}
+
+function applyManualEndTurnPerk(idx) {
+  const pet = state.board[idx];
+  if (!pet) return [];
+  const logs = [];
+  const perkName = getPetPerkName(pet);
+  const perkKey = normalizePerkNameKey(perkName);
+  if (!perkKey) return logs;
+
+  if (perkKey === 'croissant') {
+    buffPetAt(idx, 1, 0, { perkText: 'CROISSANT' });
+    logs.push(`${pet.name} (${perkName}): +1 attack`);
+  } else if (perkKey === 'cucumber') {
+    buffPetAt(idx, 0, 1, { perkText: 'CUCUMBER' });
+    logs.push(`${pet.name} (${perkName}): +1 health`);
+  } else if (perkKey === 'carrot') {
+    buffPetAt(idx, 1, 1, { perkText: 'CARROT' });
+    logs.push(`${pet.name} (${perkName}): +1/+1`);
+  } else if (perkKey === 'cake') {
+    applyTemporaryBuffAt(idx, 2, 2, state.turn + 1, { perkText: 'CAKE' });
+    logs.push(`${pet.name} (${perkName}): +2/+2 until next turn`);
+  }
+  return logs;
+}
+
 function runStartOfTurnPhase() {
   state.phase = 'start';
   state.foodDiscount = 0;
@@ -2497,6 +3363,7 @@ function runStartOfTurnPhase() {
   for (let i = 0; i < BOARD_SIZE; i += 1) {
     if (!state.board[i]) continue;
     logs.push(...executeStartOfTurnAbility(i));
+    logs.push(...applyManualStartTurnPerk(i));
     const parrot = state.board[i];
     if (
       normalizeName(parrot.name) === 'parrot' &&
@@ -2521,6 +3388,7 @@ function runEndOfTurnPhase() {
   for (let i = 0; i < BOARD_SIZE; i += 1) {
     if (!state.board[i]) continue;
     logs.push(...executeEndOfTurnAbility(i));
+    logs.push(...applyManualEndTurnPerk(i));
     const parrot = state.board[i];
     if (
       normalizeName(parrot.name) === 'parrot' &&
@@ -2600,9 +3468,7 @@ function triggerBuyAbility(pet, boardIdx) {
 
 function triggerSellAbility(pet, sourceIdx = -1) {
   const stockPerkCopies = (copies) => {
-    const perkName = typeof pet?.equipment === 'string'
-      ? pet.equipment
-      : (pet?.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : '');
+    const perkName = getPetPerkName(pet);
     if (!perkName) return;
     const perkFood = getAllFoodsAcrossPacks().find((f) => normalizeName(f.name) === normalizeName(perkName));
     if (!perkFood) return;
@@ -2702,19 +3568,32 @@ function triggerFaintAbility(pet, soldIdx) {
   }
 }
 
+function getManualPerkSellBonus(pet) {
+  const perkKey = normalizePerkNameKey(getPetPerkName(pet));
+  if (perkKey === 'rice') return 2;
+  return 0;
+}
+
 function sellPetAtIndex(idx) {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   const pet = state.board[idx];
   if (!pet) return;
   playUiSound('click', 0.7);
+  let goldGained = 0;
   if (useCalculatorShopBridge()) {
-    state.gold += Math.max(1, Number(pet.sellValue || SELL_VALUE));
+    goldGained = Math.max(1, Number(pet.sellValue || SELL_VALUE));
+    state.gold += goldGained;
     triggerSellAbility(pet, idx);
     if (state.board[idx] === pet) {
       state.board[idx] = null;
     }
   } else {
     state.board[idx] = null;
-    state.gold += SELL_VALUE;
+    goldGained = SELL_VALUE + getManualPerkSellBonus(pet);
+    state.gold += goldGained;
     triggerSellAbility(pet, idx);
     triggerFaintAbility(pet, idx);
   }
@@ -2725,10 +3604,14 @@ function sellPetAtIndex(idx) {
   renderBoard();
   renderShopPets();
   renderShopFoods();
-  setStatus(`Sold ${pet.name} for ${SELL_VALUE} gold.`);
+  setStatus(`Sold ${pet.name} for ${goldGained} gold.`);
 }
 
 function toggleFreezePetSlot(idx) {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   const slot = state.shopPets[idx];
   if (!slot || !slot.item) {
     setStatus('Cannot freeze an empty pet slot.');
@@ -2741,6 +3624,10 @@ function toggleFreezePetSlot(idx) {
 }
 
 function toggleFreezeFoodSlot(idx) {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   const slot = state.shopFoods[idx];
   if (!slot || !slot.item) {
     setStatus('Cannot freeze an empty food slot.');
@@ -2753,6 +3640,10 @@ function toggleFreezeFoodSlot(idx) {
 }
 
 function toggleFreezeExtraFoodSlot(idx) {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   const slot = state.extraShopFoods[idx];
   if (!slot || !slot.item) {
     setStatus('Cannot freeze an empty extra food slot.');
@@ -2839,6 +3730,10 @@ function combineBoardPets(sourceIdx, targetIdx) {
 }
 
 function onBoardSlotClick(idx) {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   if (state.pendingTierUp) {
     setStatus('Choose a tier-up reward first.');
     return;
@@ -2868,6 +3763,10 @@ function onBoardSlotClick(idx) {
 }
 
 function tryBuyShopPetToBoard(shopIdx, boardIdx) {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   const slot = state.shopPets[shopIdx];
   if (!slot || !slot.item) {
     setStatus('That shop pet slot is empty.');
@@ -2939,6 +3838,10 @@ function tryBuyShopPetToBoard(shopIdx, boardIdx) {
 }
 
 function tryFeedFoodToBoard(listName, foodIdx, boardIdx) {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   const foodRef = getFoodSlotRef(listName, foodIdx);
   const slot = foodRef?.slot;
   if (!slot || !slot.item) {
@@ -3083,8 +3986,8 @@ function renderBoard() {
     const statsText = createPetStatsElement(pet);
     const levelText = document.createElement('div');
     levelText.className = 'level-text';
-    levelText.textContent = `Level ${pet.levelValue ?? LEVEL_STEPS[0]}`;
-    const perkName = typeof pet.equipment === 'string' ? pet.equipment : (pet.equipment?.name || '');
+    levelText.textContent = `Level ${formatLevelValue(pet.levelValue ?? getLevelDisplayForExp(pet.exp ?? 0))}`;
+    const perkName = getPetPerkName(pet);
     const perkBadge = createPerkBadgeElement(perkName);
 
     const actions = document.createElement('div');
@@ -3109,10 +4012,40 @@ function renderBoard() {
   });
 }
 
+function matchesUiFilterText(name = '', abilityText = '') {
+  const q = String(state.uiFilters?.query || '').trim().toLowerCase();
+  if (!q) return true;
+  return String(name || '').toLowerCase().includes(q) || String(abilityText || '').toLowerCase().includes(q);
+}
+
+function sortEntriesByUiFilter(entries, type = 'pet') {
+  const mode = String(state.uiFilters?.sort || 'none').toLowerCase();
+  if (mode === 'none') return entries;
+  const sorted = [...entries];
+  if (mode === 'tier') {
+    sorted.sort((a, b) => Number(a.slot?.item?.tier || 0) - Number(b.slot?.item?.tier || 0));
+  } else if (mode === 'cost') {
+    sorted.sort((a, b) => {
+      const aCost = type === 'food' ? Number(a.slot?.item?.cost ?? BUY_COST) : BUY_COST;
+      const bCost = type === 'food' ? Number(b.slot?.item?.cost ?? BUY_COST) : BUY_COST;
+      return aCost - bCost;
+    });
+  } else if (mode === 'effect') {
+    sorted.sort((a, b) => String(a.slot?.item?.ability || '').localeCompare(String(b.slot?.item?.ability || '')));
+  }
+  return sorted;
+}
+
 function renderShopPets() {
   petSlots.innerHTML = '';
+  const entries = sortEntriesByUiFilter(
+    state.shopPets
+      .map((slot, idx) => ({ slot, idx }))
+      .filter((x) => x.slot?.item ? matchesUiFilterText(x.slot.item.name, x.slot.item.ability) : true),
+    'pet'
+  );
 
-  state.shopPets.forEach((slot, idx) => {
+  entries.forEach(({ slot, idx }) => {
     const el = document.createElement('div');
     el.className = 'slot';
 
@@ -3242,12 +4175,24 @@ function renderShopFoods() {
     return el;
   };
 
-  state.shopFoods.forEach((slot, idx) => {
+  const mainFoodEntries = sortEntriesByUiFilter(
+    state.shopFoods
+      .map((slot, idx) => ({ slot, idx }))
+      .filter((x) => x.slot?.item ? matchesUiFilterText(x.slot.item.name, x.slot.item.ability) : true),
+    'food'
+  );
+  mainFoodEntries.forEach(({ slot, idx }) => {
     foodSlots.appendChild(renderFoodCard(slot, idx, 'main'));
   });
 
   if (extraFoodSlots) {
-    state.extraShopFoods.forEach((slot, idx) => {
+    const extraEntries = sortEntriesByUiFilter(
+      state.extraShopFoods
+        .map((slot, idx) => ({ slot, idx }))
+        .filter((x) => x.slot?.item ? matchesUiFilterText(x.slot.item.name, x.slot.item.ability) : true),
+      'food'
+    );
+    extraEntries.forEach(({ slot, idx }) => {
       extraFoodSlots.appendChild(renderFoodCard(slot, idx, 'extra'));
     });
   }
@@ -3470,14 +4415,25 @@ function switchPack(packId) {
   state.peachUpgradeBonus = 0;
   state.lastBattleLost = false;
   state.rollsThisTurn = 0;
+  state.level3SoldThisTurn = 0;
+  state.summonedThisTurn = 0;
   state.playerToy = null;
   state.playerToyLevel = 1;
+  state.toyChoices = [];
+  state.toyChoiceContext = null;
+  state.lastToySource = null;
+  state.toyModalOpen = false;
+  state.battleActive = { side: null, idx: -1 };
+  state.toyModalFocusIndex = 0;
+  state.debugTriggerLog = [];
+  state.levelHistoryBySlot = Array.from({ length: BOARD_SIZE }, () => []);
   state.board = Array(BOARD_SIZE).fill(null);
   resetSelection();
   state.pendingTierUp = null;
   state.pendingTierUpQueue = [];
   state.battleReport = null;
   renderBattleReport();
+  closeToyPickerModal();
   clearTooltip();
   renderTierUpInline();
 
@@ -3519,6 +4475,10 @@ function switchPack(packId) {
 }
 
 function rollShop() {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   playUiSound('click', 0.7);
   if (state.pendingTierUp) {
     if (state.gold < ROLL_COST) {
@@ -3564,6 +4524,10 @@ function rollShop() {
 }
 
 async function endTurn() {
+  if (isUiModalBlocking()) {
+    setStatus('Resolve toy modal selection first.');
+    return;
+  }
   playUiSound('click', 0.7);
   if (state.battleInProgress) return;
   if (state.pendingTierUp) {
@@ -3607,6 +4571,8 @@ async function endTurn() {
 
   state.turn += 1;
   state.rollsThisTurn = 0;
+  state.level3SoldThisTurn = 0;
+  state.summonedThisTurn = 0;
   clearExpiredTemporaryEffects();
   const bonusGold = Number(state.nextTurnBonusGold || 0);
   state.gold = START_GOLD + bonusGold;
@@ -3722,7 +4688,9 @@ async function init() {
     await loadManifest();
     try {
       await loadCalculatorSim();
+      pushDebugTrigger('BridgeInit', `Loaded authoritative mechanics engine (${MECHANICS_MODE}).`);
     } catch (err) {
+      pushDebugTrigger('BridgeInit', `Failed to load mechanics engine: ${err.message}`);
       setStatus(`Calculator not loaded: ${err.message}`);
     }
     const packData = await loadPackData();
@@ -3736,12 +4704,13 @@ async function init() {
     renderBattleReport();
     updateHud();
     renderBoard();
-
     renderToyPickerOptions();
-    if (playerToyLevelInput) playerToyLevelInput.value = '1';
 
     packSelect.value = '1';
     switchPack(1);
+    if (!isAuthoritativeMechanicsReady()) {
+      setStatus(`Startup warning: ${MECHANICS_MODE} not ready. Mechanics may be incomplete until calculator engine loads.`);
+    }
     await verifySpriteData();
   } catch (err) {
     setStatus(`Startup error: ${err.message}`);
@@ -3758,35 +4727,73 @@ restartBtn.addEventListener('click', () => {
 });
 endTurnBtn.addEventListener('click', endTurn);
 tierUpSkipBtn.addEventListener('click', skipTierUpReward);
-if (playerToyInput) {
-  playerToyInput.addEventListener('change', () => {
-    const forced = getForcedToyChoice();
-    if (forced) {
-      state.forcedToyName = forced.name;
-      state.forcedToyLevel = forced.level;
-      state.playerToy = forced.name;
-      state.playerToyLevel = forced.level;
-    } else {
-      state.forcedToyName = null;
-      state.playerToy = null;
-      state.playerToyLevel = 1;
-    }
-    renderBattleReport();
-  });
-}
-if (playerToyLevelInput) {
-  playerToyLevelInput.addEventListener('change', () => {
-    const lvl = Math.max(1, Math.min(3, Number(playerToyLevelInput.value || 1)));
-    playerToyLevelInput.value = String(lvl);
-    state.forcedToyLevel = lvl;
-    if (state.forcedToyName) state.playerToyLevel = lvl;
-    renderBattleReport();
-  });
-}
 window.addEventListener('scroll', clearTooltip, true);
+window.addEventListener('keydown', (ev) => {
+  if (!state.toyModalOpen) return;
+  const choices = Array.isArray(state.toyChoices) ? state.toyChoices : [];
+  if (ev.key === 'Escape') {
+    closeToyPickerModal();
+    return;
+  }
+  if (!choices.length) return;
+  if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') {
+    ev.preventDefault();
+    focusToyChoiceByIndex(state.toyModalFocusIndex + 1);
+    return;
+  }
+  if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    focusToyChoiceByIndex(state.toyModalFocusIndex - 1);
+    return;
+  }
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    const selected = choices[Math.max(0, Math.min(choices.length - 1, state.toyModalFocusIndex))];
+    if (selected?.name) {
+      selectToyChoice(selected.name);
+    }
+  }
+});
 if (battleSkipBtn) {
   battleSkipBtn.addEventListener('click', () => {
     state.battlePlaybackSkip = true;
+  });
+}
+if (toyPickerCloseBtn) {
+  toyPickerCloseBtn.addEventListener('click', closeToyPickerModal);
+}
+if (toyPickerModal) {
+  toyPickerModal.addEventListener('click', (ev) => {
+    if (ev.target === toyPickerModal) {
+      closeToyPickerModal();
+    }
+  });
+}
+if (itemSortSelect) {
+  itemSortSelect.addEventListener('change', () => {
+    state.uiFilters.sort = String(itemSortSelect.value || 'none');
+    renderShopPets();
+    renderShopFoods();
+  });
+}
+if (itemFilterInput) {
+  itemFilterInput.addEventListener('input', () => {
+    state.uiFilters.query = String(itemFilterInput.value || '');
+    renderShopPets();
+    renderShopFoods();
+  });
+}
+if (colorBlindToggle) {
+  colorBlindToggle.addEventListener('change', () => {
+    state.colorBlindMode = Boolean(colorBlindToggle.checked);
+    applyAccessibilitySettings();
+  });
+}
+if (uiZoomRange) {
+  uiZoomRange.addEventListener('input', () => {
+    const next = Math.max(0.85, Math.min(1.2, Number(uiZoomRange.value || 100) / 100));
+    state.uiScale = next;
+    applyAccessibilitySettings();
   });
 }
 
