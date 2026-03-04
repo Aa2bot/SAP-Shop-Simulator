@@ -72,7 +72,6 @@
           <h3 class="overlay-title">Tier-Up Reward</h3>
           <p id="tierUpText" class="overlay-text"></p>
           <div id="tierUpChoices" class="tier-up-choices"></div>
-          <button id="tierUpSkipBtn" class="small-btn">Skip</button>
         </div>
       </section>
 
@@ -108,14 +107,20 @@
       <p id="battleSceneLevels" class="battle-meta"></p>
       <p id="battleSceneStatus" class="battle-meta"></p>
       <div class="battle-lane">
-        <h3>Opponent</h3>
+        <div class="battle-lane-head">
+          <h3>Opponent</h3>
+          <div id="battleOpponentToy" class="battle-team-toy-slot empty">No Toy</div>
+        </div>
         <div id="battleOpponentSlots" class="battle-slots"></div>
       </div>
       <div class="battle-center">
         <p id="battleSceneEvent" class="battle-event">Preparing battle...</p>
       </div>
       <div class="battle-lane">
-        <h3>You</h3>
+        <div class="battle-lane-head">
+          <h3>You</h3>
+          <div id="battlePlayerToy" class="battle-team-toy-slot empty">No Toy</div>
+        </div>
         <div id="battlePlayerSlots" class="battle-slots"></div>
       </div>
       <div id="battleSceneLog" class="battle-scene-log"></div>

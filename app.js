@@ -1,5 +1,6 @@
 ﻿const START_GOLD = 10;
 const BUY_COST = 3;
+const TIER_UP_COST = 3;
 const ROLL_COST = 1;
 const SELL_VALUE = 1;
 const BOARD_SIZE = 5;
@@ -7,6 +8,11 @@ const PET_SHOP_SIZE = 3;
 const FOOD_SHOP_SIZE = 1;
 const EXTRA_FOOD_SHOP_SIZE = 5;
 const LEVEL_STEPS = [1, 1.5, 2, 2.5, 2.75, 3];
+const MAGPIE_STORED_GOLD_CAP_BY_LEVEL = {
+  1: 1,
+  2: 2,
+  3: 3
+};
 const HEART_ICON = 'assets/sap_textures/Texture2D/Heart.png';
 const FIST_ICON = 'assets/sap_textures/Texture2D/Fist.png';
 const ICE_ICON = 'assets/sap_textures/Texture2D/Icecube.png';
@@ -14,7 +20,8 @@ const UI_SOUNDS = {
   click: 'click',
   freeze: 'freeze',
   unfreeze: 'unfreeze',
-  levelup: 'levelup'
+  levelup: 'levelup',
+  toybreak: 'deny'
 };
 
 const ALIASES = {
@@ -91,6 +98,7 @@ const DEFAULT_PERK_NOTES = {
   pineapple: 'Ability deals +2 extra damage three times.',
   pie: 'Before battle: Gain +4 attack and +3 health.',
   salt: 'Attack for double damage once.',
+  sausage: 'Start of turn: Gain one free roll.',
   baguette: 'Before attack: Remove front enemy perk once.',
   cheese: 'Attack with at least 15 attack once.',
   grapes: 'Start of turn: Gain +1 gold.',
@@ -181,6 +189,7 @@ const CALCULATOR_PACK_BY_APP_ID = {
 };
 const BATTLE_LOG_LIMIT = 140;
 const TRIGGER_DEBUG_LIMIT = 120;
+const TURN_ABILITY_STEP_MS = 300;
 const MECHANICS_MODE = 'calculator_authoritative';
 const WIKI_REFERENCE_LINKS = {
   pets: 'https://superautopets.wiki.gg/wiki/Pets',
@@ -199,11 +208,14 @@ const TOY_DEFINITIONS = [
   { name: 'Garlic Press', tier: 2, effect: 'Start of battle: Give right-most friend Garlic perk (scales to multiple friends).', sourcePet: 'Lemur', pack: 'Puppy Pack' },
   { name: 'Toilet Paper', tier: 3, effect: 'Start of battle: Make first 1-3 enemies Weak.', sourcePet: 'Puppy', pack: 'Puppy Pack' },
   { name: 'Oven Mitts', tier: 3, effect: 'Break: Stock free Lasagnas (1-3).', sourcePet: 'Puppy', pack: 'Puppy Pack' },
-  { name: 'Melon Helmet', tier: 4, effect: 'Break: Give right-most friends Melon perk.', sourcePet: 'Gharial', pack: 'Golden Pack' },
-  { name: 'Foam Sword', tier: 4, effect: 'Start of battle: Deal 6 damage to image target (scales with level).', sourcePet: 'Gharial', pack: 'Golden Pack' },
-  { name: 'Toy Gun', tier: 4, effect: 'Start of battle: Deal 6 damage to last enemy (scales with level).', sourcePet: 'Gharial', pack: 'Golden Pack' },
-  { name: 'Flashlight', tier: 5, effect: 'Break: Give right-most friend +6/+6 (scales with level).', sourcePet: 'Sting Ray', pack: 'Golden Pack' },
-  { name: 'Stinky Sock', tier: 5, effect: 'Start of battle: Reduce highest-health enemy by 40% (scales with level).', sourcePet: 'Sting Ray', pack: 'Golden Pack' },
+  { name: 'Melon Helmet', tier: 4, effect: 'Break: Give right-most friends Melon perk.', sourcePet: 'Gharial', pack: 'Puppy Pack' },
+  { name: 'Foam Sword', tier: 4, effect: 'Start of battle: Deal 6 damage to image target (scales with level).', sourcePet: 'Gharial', pack: 'Puppy Pack' },
+  { name: 'Toy Gun', tier: 4, effect: 'Start of battle: Deal 6 damage to last enemy (scales with level).', sourcePet: 'Gharial', pack: 'Puppy Pack' },
+  { name: 'Flashlight', tier: 5, effect: 'Break: Give right-most friend +6/+6 (scales with level).', sourcePet: 'Sting Ray', pack: 'Puppy Pack' },
+  { name: 'Stinky Sock', tier: 5, effect: 'Start of battle: Reduce highest-health enemy by 40% (scales with level).', sourcePet: 'Sting Ray', pack: 'Puppy Pack' },
+  { name: 'Television', tier: 6, effect: 'Break: Give all friends +attack and +health (scales with level).', sourcePet: 'Mongoose', pack: 'Puppy Pack' },
+  { name: 'Peanut Jar', tier: 6, effect: 'Start of battle: Give right-most friend(s) Peanut perk (scales with level).', sourcePet: 'Mongoose', pack: 'Puppy Pack' },
+  { name: 'Air Palm Tree', tier: 6, effect: 'Start of battle: Give right-most friend(s) Coconut perk (scales with level).', sourcePet: 'Mongoose', pack: 'Puppy Pack' },
   { name: 'Magic Carpet', tier: '1-3', effect: 'Friend summoned: Gain image attack bonus (scales by level).', sourcePet: 'Sphinx', pack: 'Unicorn Pack' },
   { name: 'Magic Lamp', tier: '1-3', effect: 'Friendly level-up: Grant image stat bonus (scales by level).', sourcePet: 'Sphinx', pack: 'Unicorn Pack' },
   { name: 'Winged Sandals', tier: '1-3', effect: 'End turn: Gain 1-3 free rolls next turn.', sourcePet: 'Griffin', pack: 'Unicorn Pack' },
@@ -215,7 +227,8 @@ const TOY_DEFINITIONS = [
   { name: 'Evil Book', tier: '1-3', effect: 'Empty front space: Summon Great One (scales damage by level).', sourcePet: 'Bad Dog', pack: 'Unicorn Pack' },
   { name: 'Excalibur', tier: '1-3', effect: 'End turn: Back-most friend gains scaling stats for 30 turns.', sourcePet: 'Questing Beast', pack: 'Unicorn Pack' },
   { name: 'Holy Grail', tier: '1-3', effect: 'Break: Summon free Holy Water (1-3).', sourcePet: 'Questing Beast', pack: 'Unicorn Pack' },
-  { name: 'Microwave Oven', tier: '1-3', effect: 'Start of battle: Give Popcorn perk to front-most perkless friends.', sourcePet: 'Vervet', pack: 'Golden Pack' }
+  { name: 'Microwave Oven', tier: '1-3', effect: 'Start of battle: Give Popcorn perk to front-most perkless friends.', sourcePet: 'Vervet', pack: 'Golden Pack' },
+  { name: 'Witch Broom', tier: '1-3', effect: 'Start of battle: Make random perk-less enemies Weak (scales with level).', sourcePet: 'Cuddle Toad', pack: 'Unicorn Pack' }
 ];
 
 const state = {
@@ -224,6 +237,8 @@ const state = {
   phase: 'during',
   foodDiscount: 0,
   nextTurnBonusGold: 0,
+  freeRolls: 0,
+  nextTurnFreeRolls: 0,
   cannedShopPetAtkBuff: 0,
   cannedShopPetHpBuff: 0,
   peachUpgradeBonus: 0,
@@ -242,6 +257,10 @@ const state = {
     pets: [],
     foods: []
   },
+  referenceData: {
+    pets: [],
+    foods: []
+  },
   wallpapers: [],
   pendingTierUp: null,
   pendingTierUpQueue: [],
@@ -249,6 +268,15 @@ const state = {
   toyCatalog: [],
   playerToy: null,
   playerToyLevel: 1,
+  playerToyExplicitlySelected: false,
+  teamToys: {
+    player: null,
+    opponent: null
+  },
+  pendingToyBreakFx: [],
+  toyBreakListeners: [],
+  toyBreakEventSeen: {},
+  battleGeckoToyBreakBindings: [],
   toyChoices: [],
   toyChoiceContext: null,
   battleReport: null,
@@ -256,6 +284,10 @@ const state = {
   battleInProgress: false,
   textureAudit: null,
   rollsThisTurn: 0,
+  rollCounterPulseUntilBySlot: Array.from({ length: BOARD_SIZE }, () => 0),
+  rollCounterHideTimer: null,
+  rollAbilityTagsByPetKey: {},
+  rollTagFallbackUsed: false,
   level3SoldThisTurn: 0,
   summonedThisTurn: 0,
   nameIdAliases: {},
@@ -278,11 +310,16 @@ const state = {
   rollActionLocked: false,
   lastRollInputAt: 0,
   shopAilmentBySlot: Array.from({ length: BOARD_SIZE }, () => ''),
+  shopManaBySlot: Array.from({ length: BOARD_SIZE }, () => 0),
   battleAilmentBySide: {
     player: Array.from({ length: BOARD_SIZE }, () => ''),
     opponent: Array.from({ length: BOARD_SIZE }, () => '')
   },
   battleManaBySide: {
+    player: Array.from({ length: BOARD_SIZE }, () => 0),
+    opponent: Array.from({ length: BOARD_SIZE }, () => 0)
+  },
+  battleManaRenderBySide: {
     player: Array.from({ length: BOARD_SIZE }, () => 0),
     opponent: Array.from({ length: BOARD_SIZE }, () => 0)
   },
@@ -324,7 +361,6 @@ const uiZoomRange = document.getElementById('uiZoomRange');
 const tierUpInline = document.getElementById('tierUpInline');
 const tierUpText = document.getElementById('tierUpText');
 const tierUpChoices = document.getElementById('tierUpChoices');
-const tierUpSkipBtn = document.getElementById('tierUpSkipBtn');
 const hoverTooltip = document.getElementById('hoverTooltip');
 const battleSummary = document.getElementById('battleSummary');
 const battleLog = document.getElementById('battleLog');
@@ -337,6 +373,8 @@ const battleSceneLevels = document.getElementById('battleSceneLevels');
 const battleSceneStatus = document.getElementById('battleSceneStatus');
 const battleSceneLog = document.getElementById('battleSceneLog');
 const battleSkipBtn = document.getElementById('battleSkipBtn');
+const battleOpponentToy = document.getElementById('battleOpponentToy');
+const battlePlayerToy = document.getElementById('battlePlayerToy');
 
 function normalizeName(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -384,6 +422,31 @@ function resolveTexture(name) {
   return null;
 }
 
+function resolvePetTexture(name) {
+  const key = normalizeName(name);
+  if (!key) return null;
+  const exact = state.textureLookup[key] || SUPPLEMENTAL_TEXTURE_LOOKUP[key];
+  if (exact) return exact;
+  const resolved = resolveTexture(name);
+  if (!resolved) return null;
+  const filename = String(resolved.split('/').pop() || '').replace(/\.[^.]+$/, '');
+  const fileKey = normalizeName(filename);
+  const looksVariant = fileKey === `no${key}`
+    || fileKey === `${key}preview`
+    || fileKey === `${key}draw`
+    || fileKey === `${key}battle`
+    || fileKey === `${key}build`
+    || fileKey === `${key}victory`
+    || fileKey === `${key}defeat`
+    || fileKey === `${key}posejump`
+    || fileKey === `${key}posefall`;
+  if (looksVariant) {
+    const fallback = state.textureLookup[key] || SUPPLEMENTAL_TEXTURE_LOOKUP[key];
+    if (fallback) return fallback;
+  }
+  return resolved;
+}
+
 function resolveSound(name) {
   const key = normalizeName(name);
   const aliasKey = ALIASES[key];
@@ -410,6 +473,10 @@ function setStatus(msg) {
   statusText.classList.remove('bump');
   void statusText.offsetWidth;
   statusText.classList.add('bump');
+}
+
+function waitMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms || 0))));
 }
 
 function logRootCauseOnce(key, message) {
@@ -452,6 +519,12 @@ function updateHud() {
 function updateRollButtonState() {
   if (!rollBtn) return;
   rollBtn.disabled = Boolean(state.rollActionLocked);
+  const freeRolls = Math.max(0, Number(state.freeRolls || 0));
+  if (freeRolls > 0) {
+    rollBtn.textContent = `Roll Shop (free x${freeRolls})`;
+  } else {
+    rollBtn.textContent = `Roll Shop (-${ROLL_COST} Gold)`;
+  }
 }
 
 function getPetShopSizeForTurn(turn = state.turn) {
@@ -522,8 +595,9 @@ function markFoodSlotFx(slot, fxKind, amount = 0) {
 function renderActiveToyDisplay() {
   if (!activeToySlot) return;
   activeToySlot.innerHTML = '';
-  const toyName = String(state.playerToy || '').trim();
-  if (!toyName) {
+  const playerToy = getActiveTeamToy('player');
+  const toyName = String(playerToy?.toy_id || state.playerToy || '').trim();
+  if (!toyName || !playerToy) {
     const empty = document.createElement('div');
     empty.className = 'name';
     empty.textContent = 'No Toy';
@@ -541,7 +615,9 @@ function renderActiveToyDisplay() {
   const media = renderCardImage(toy);
   const label = document.createElement('div');
   label.className = 'name';
-  label.textContent = `${toyName} (L${Math.max(1, Math.min(3, Number(state.playerToyLevel || 1)))})`;
+  const toyLevel = Math.max(1, Math.min(3, Number(playerToy.toy_level || state.playerToyLevel || 1)));
+  const remaining = Math.max(0, Number(playerToy.remaining_turns || 0));
+  label.textContent = `${toyName} (L${toyLevel}) x${remaining}`;
   card.appendChild(media);
   card.appendChild(label);
   activeToySlot.appendChild(card);
@@ -550,18 +626,23 @@ function renderActiveToyDisplay() {
 function selectToyChoice(toyName) {
   const toy = (state.toyChoices || []).find((t) => normalizeName(t.name) === normalizeName(toyName));
   if (!toy) return;
+  if (!doesPackSupportToys(state.currentPackId) || !isToyValidForPackAndTurn(toy.name, state.currentPackId, state.turn)) {
+    setStatus(`Toy ${toy.name} is not valid for this pack/turn.`);
+    return;
+  }
   const petLevel = Math.max(1, Math.min(3, Number(state.toyChoiceContext?.petLevel || 1)));
-  state.playerToy = toy.name;
-  state.playerToyLevel = petLevel;
+  state.teamToys.player = buildTeamToyState(toy.name, petLevel, state.currentPackId);
+  state.playerToyExplicitlySelected = true;
+  syncLegacyPlayerToyFields();
   state.lastToySource = state.toyChoiceContext?.sourcePet || null;
   state.toyChoices = [];
   state.toyChoiceContext = null;
-  closeToyPickerModal();
+  closeToyPickerModal(false);
   renderActiveToyDisplay();
   renderToyChoiceDisplay();
   renderInventoryPanel();
   renderBattleReport();
-  setStatus(`Selected toy: ${toy.name} (L${petLevel}).`);
+  setStatus(`Selected toy: ${toy.name} (L${petLevel}) durability x2.`);
 }
 
 function renderToyChoiceDisplay() {
@@ -634,7 +715,7 @@ function openToyPickerModal() {
   focusToyChoiceByIndex(0);
 }
 
-function closeToyPickerModal() {
+function closeToyPickerModal(skipSelection = true) {
   if (!toyPickerModal) return;
   if (state.toyModalCloseTimer) {
     clearTimeout(state.toyModalCloseTimer);
@@ -642,6 +723,14 @@ function closeToyPickerModal() {
   }
   state.toyModalOpen = false;
   state.toyModalFocusIndex = 0;
+  // Closing without choosing is treated as skipping toy selection.
+  if (skipSelection) {
+    state.teamToys.player = null;
+    state.playerToyExplicitlySelected = false;
+    syncLegacyPlayerToyFields();
+  }
+  state.toyChoices = [];
+  state.toyChoiceContext = null;
   toyPickerModal.classList.add('closing');
   state.toyModalCloseTimer = setTimeout(() => {
     toyPickerModal.classList.add('hidden');
@@ -1101,6 +1190,24 @@ function findSnapshotPetIndexByName(sideArr, name) {
   return -1;
 }
 
+function applyBattleManaDelta(snapshot, petName, delta) {
+  const amount = Number(delta || 0);
+  if (!snapshot || !petName || !Number.isFinite(amount) || amount === 0) return false;
+  const playerIdx = findSnapshotPetIndexByName(snapshot?.player, petName);
+  if (playerIdx >= 0) {
+    const cur = Math.max(0, Number(state.battleManaBySide?.player?.[playerIdx] || 0));
+    state.battleManaBySide.player[playerIdx] = Math.max(0, cur + amount);
+    return true;
+  }
+  const opponentIdx = findSnapshotPetIndexByName(snapshot?.opponent, petName);
+  if (opponentIdx >= 0) {
+    const cur = Math.max(0, Number(state.battleManaBySide?.opponent?.[opponentIdx] || 0));
+    state.battleManaBySide.opponent[opponentIdx] = Math.max(0, cur + amount);
+    return true;
+  }
+  return false;
+}
+
 function parseAttackLog(text) {
   const m = String(text || '').match(/^(.+?) attacks (.+?) for (\d+)\.?$/i);
   if (!m) return null;
@@ -1218,6 +1325,10 @@ function extractBattleSnapshot(rawMessage) {
 function renderBattleSceneSlots(container, slots, side = 'player', report = null) {
   if (!container) return;
   container.innerHTML = '';
+  if (!state.battleManaRenderBySide?.[side]) {
+    state.battleManaRenderBySide = state.battleManaRenderBySide || { player: [], opponent: [] };
+    state.battleManaRenderBySide[side] = Array.from({ length: BOARD_SIZE }, () => 0);
+  }
   const prevSlots = Array.isArray(state.lastBattleRenderBySide?.[side]) ? state.lastBattleRenderBySide[side] : [];
   const prevIndexByKey = new Map();
   prevSlots.forEach((prevPet, prevIdx) => {
@@ -1246,6 +1357,7 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
       }
       state.battleAilmentBySide[side][i] = '';
       state.battleManaBySide[side][i] = 0;
+      state.battleManaRenderBySide[side][i] = 0;
       const blank = document.createElement('div');
       blank.className = 'battle-slot-name';
       blank.textContent = 'Empty';
@@ -1301,11 +1413,23 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
     const name = document.createElement('div');
     name.className = 'battle-slot-name';
     name.textContent = pet.name;
-    const mana = Math.max(0, Number(state.battleManaBySide?.[side]?.[i] || 0));
-    if (mana > 0) {
-      const manaBadge = createManaBadgeElement(mana);
-      if (manaBadge) el.appendChild(manaBadge);
+    const trackedMana = Number(state.battleManaBySide?.[side]?.[i]);
+    const snapshotMana = Number(pet?.mana);
+    const mana = Number.isFinite(trackedMana)
+      ? Math.max(0, trackedMana)
+      : (Number.isFinite(snapshotMana) ? Math.max(0, snapshotMana) : 0);
+    if (!state.battleManaBySide?.[side]) {
+      state.battleManaBySide[side] = Array.from({ length: BOARD_SIZE }, () => 0);
     }
+    state.battleManaBySide[side][i] = mana;
+    const prevMana = Math.max(0, Number(state.battleManaRenderBySide?.[side]?.[i] ?? mana));
+    const manaDelta = mana - prevMana;
+    const manaBadge = createManaBadgeElement(mana, {
+      delta: manaDelta,
+      floatingGain: manaDelta > 0 ? manaDelta : 0
+    });
+    if (manaBadge) el.appendChild(manaBadge);
+    state.battleManaRenderBySide[side][i] = mana;
     const moveKey = [
       normalizeName(pet.name),
       Number(pet.attack || 0),
@@ -1368,6 +1492,107 @@ function createBattleStatBars(attack, health, maxAttack, maxHealth) {
   return wrap;
 }
 
+function consumePendingToyBreakFx(side) {
+  if (!Array.isArray(state.pendingToyBreakFx) || !state.pendingToyBreakFx.length) return null;
+  const idx = state.pendingToyBreakFx.findIndex((row) => String(row?.side || '') === side);
+  if (idx < 0) return null;
+  const [entry] = state.pendingToyBreakFx.splice(idx, 1);
+  return entry || null;
+}
+
+function renderBattleToyBadge(container, toyState, side) {
+  if (!container) return;
+  container.innerHTML = '';
+  const toyId = String(toyState?.toy_id || '').trim();
+  const remaining = Math.max(0, Number(toyState?.remaining_turns || 0));
+  if (!toyId || remaining <= 0) {
+    container.classList.add('empty');
+    container.textContent = 'No Toy';
+    return;
+  }
+  container.classList.remove('empty');
+  const wrap = document.createElement('div');
+  wrap.className = 'battle-team-toy toy-active';
+  const tex = resolveTexture(toyId);
+  if (tex) {
+    const img = document.createElement('img');
+    img.src = tex;
+    img.alt = toyId;
+    wrap.appendChild(img);
+  }
+  const counter = document.createElement('span');
+  counter.className = 'battle-team-toy-counter';
+  counter.textContent = `x${remaining}`;
+  wrap.appendChild(counter);
+  const breakFx = consumePendingToyBreakFx(side);
+  if (breakFx) {
+    wrap.classList.add('toy-break');
+  }
+  bindHoverTooltip(wrap, 'toy', {
+    name: toyId,
+    tier: getToyMetaByName(toyId)?.tier || 1,
+    path: tex
+  });
+  container.appendChild(wrap);
+}
+
+function renderBattleTeamToyDisplays(report) {
+  const playerToyState = report?.playerToyState || getActiveTeamToy('player');
+  const opponentToyState = report?.opponentToyState || getActiveTeamToy('opponent');
+  renderBattleToyBadge(battlePlayerToy, playerToyState, 'player');
+  renderBattleToyBadge(battleOpponentToy, opponentToyState, 'opponent');
+}
+
+function setupBattleGeckoToyBreakBindings(report) {
+  const out = [];
+  const register = (side, toyState, pets) => {
+    if (!toyState || Number(toyState.remaining_turns || 0) <= 0) return;
+    const meta = getToyBreakMetadata(toyState.toy_id);
+    if (!meta?.has_break_ability || !meta?.break_ability_kind) return;
+    const geckoPresent = (pets || []).some((pet) => normalizeName(pet?.name || '') === 'gecko');
+    if (!geckoPresent) return;
+    out.push({
+      side,
+      pet_name: 'Gecko',
+      toyState: { ...toyState },
+      consumed: false
+    });
+  };
+  register('player', report?.playerToyState, report?.playerInitialPets);
+  register('opponent', report?.opponentToyState, report?.opponentInitialPets);
+  state.battleGeckoToyBreakBindings = out;
+}
+
+function tryTriggerGeckoToyBreakFromFaintLog(text, snapshot) {
+  const faintMatch = String(text || '').match(/^(.+?)\s+fainted\.?$/i);
+  if (!faintMatch) return null;
+  const faintedName = String(faintMatch[1] || '').trim().replace(/[.]+$/, '');
+  if (normalizeName(faintedName) !== 'gecko') return null;
+  const bindings = Array.isArray(state.battleGeckoToyBreakBindings) ? state.battleGeckoToyBreakBindings : [];
+  for (const binding of bindings) {
+    if (binding.consumed) continue;
+    const idx = binding.side === 'player'
+      ? findSnapshotPetIndexByName(snapshot?.player, faintedName)
+      : findSnapshotPetIndexByName(snapshot?.opponent, faintedName);
+    if (idx < 0) continue;
+    const geckoPet = binding.side === 'player' ? snapshot?.player?.[idx] : snapshot?.opponent?.[idx];
+    const ailmentKey = normalizeName(geckoPet?.ailment || '');
+    if (ailmentKey.includes('silence')) {
+      binding.consumed = true;
+      return `${binding.side === 'player' ? 'Your' : 'Opponent'} Gecko was silenced; copied toy break skipped.`;
+    }
+    const result = dispatchToyBreakEvent({
+      source: 'gecko_faint_copy',
+      side: binding.side,
+      toyState: { ...binding.toyState },
+      nonce: `${state.turn}-${binding.side}-gecko`
+    });
+    binding.consumed = true;
+    return `${binding.side === 'player' ? 'Your' : 'Opponent'} Gecko copied ${binding.toyState.toy_id} break: ${result?.note || 'resolved'}`;
+  }
+  return null;
+}
+
 function showBattleScene(report) {
   if (!battleScreen) return;
   state.battlePlaybackSkip = false;
@@ -1380,17 +1605,28 @@ function showBattleScene(report) {
     player: Array.from({ length: BOARD_SIZE }, (_, i) => Math.max(0, Number(report?.playerInitialPets?.[i]?.mana || 0))),
     opponent: Array.from({ length: BOARD_SIZE }, (_, i) => Math.max(0, Number(report?.opponentInitialPets?.[i]?.mana || 0)))
   };
+  state.battleManaRenderBySide = {
+    player: Array.from({ length: BOARD_SIZE }, (_, i) => Math.max(0, Number(report?.playerInitialPets?.[i]?.mana || 0))),
+    opponent: Array.from({ length: BOARD_SIZE }, (_, i) => Math.max(0, Number(report?.opponentInitialPets?.[i]?.mana || 0)))
+  };
   state.lastBattleRenderBySide = { player: [], opponent: [] };
-  battleSceneMeta.textContent = `Turn ${report.turn} | Opponent pack: ${report.opponentPackName}`;
+  battleSceneMeta.textContent = `Turn ${report.turn} | Opponent pack: ${report.opponentPackName} | Rolls: ${Math.max(0, Number(report.rollCountAtBattleStart || 0))}`;
   if (battleSceneLevels) {
     battleSceneLevels.textContent = `Your levels: ${summarizeTeamLevels(report.playerInitialPets) || 'none'} | Opponent levels: ${summarizeTeamLevels(report.opponentInitialPets) || 'none'}`;
   }
   if (battleSceneStatus) {
-    const toyLabel = report.playerToy ? `${report.playerToy} (L${report.playerToyLevel || 1})` : 'None';
-    battleSceneStatus.textContent = `Toy: ${toyLabel} | Trumpets: You 0 / Opp 0 | Ailments: none`;
+    const playerToyLabel = report.playerToyState?.toy_id
+      ? `${report.playerToyState.toy_id} x${Math.max(0, Number(report.playerToyState.remaining_turns || 0))}`
+      : 'None';
+    const opponentToyLabel = report.opponentToyState?.toy_id
+      ? `${report.opponentToyState.toy_id} x${Math.max(0, Number(report.opponentToyState.remaining_turns || 0))}`
+      : 'None';
+    battleSceneStatus.textContent = `Toys: You ${playerToyLabel} / Opp ${opponentToyLabel} | Trumpets: You 0 / Opp 0 | Ailments: none`;
   }
   battleSceneEvent.textContent = 'Battle start';
   battleSceneLog.textContent = '';
+  setupBattleGeckoToyBreakBindings(report);
+  renderBattleTeamToyDisplays(report);
   renderBattleSceneSlots(battlePlayerSlots, Array(BOARD_SIZE).fill(null), 'player', report);
   renderBattleSceneSlots(battleOpponentSlots, Array(BOARD_SIZE).fill(null), 'opponent', report);
   battleScreen.classList.remove('hidden');
@@ -1414,8 +1650,13 @@ async function playBattleScene(report) {
 
   const updateBattleStatusLine = () => {
     if (!battleSceneStatus) return;
-    const toyLabel = report.playerToy ? `${report.playerToy} (L${report.playerToyLevel || 1})` : 'None';
-    battleSceneStatus.textContent = `Toy: ${toyLabel} | Trumpets: You ${playerTrumpets} / Opp ${opponentTrumpets}${lastAilment ? ` | Ailment: ${lastAilment}` : ''}`;
+    const playerToyLabel = report.playerToyState?.toy_id
+      ? `${report.playerToyState.toy_id} x${Math.max(0, Number(report.playerToyState.remaining_turns || 0))}`
+      : 'None';
+    const opponentToyLabel = report.opponentToyState?.toy_id
+      ? `${report.opponentToyState.toy_id} x${Math.max(0, Number(report.opponentToyState.remaining_turns || 0))}`
+      : 'None';
+    battleSceneStatus.textContent = `Toys: You ${playerToyLabel} / Opp ${opponentToyLabel} | Trumpets: You ${playerTrumpets} / Opp ${opponentTrumpets}${lastAilment ? ` | Ailment: ${lastAilment}` : ''}`;
   };
 
   for (let i = 0; i < logs.length; i += 1) {
@@ -1470,28 +1711,70 @@ async function playBattleScene(report) {
       if (ailment) {
         lastAilment = ailment.toUpperCase();
       }
-      const manaGain = text.match(/gain(?:ed|s)?\s+(\d+)\s+mana/i);
-      const manaSpent = text.match(/spen(?:d|t)\s+(\d+)\s+mana/i);
-      if (manaGain || manaSpent) {
-        const actorName = String(text.split(' ')[0] || '').trim();
-        const amount = Number((manaGain || manaSpent)?.[1] || 0);
-        const playerIdx = findSnapshotPetIndexByName(lastSnapshot?.player, actorName);
-        const opponentIdx = findSnapshotPetIndexByName(lastSnapshot?.opponent, actorName);
-        if (playerIdx >= 0) {
-          const cur = Math.max(0, Number(state.battleManaBySide?.player?.[playerIdx] || 0));
-          state.battleManaBySide.player[playerIdx] = manaGain ? cur + amount : Math.max(0, cur - amount);
-          if (lastSnapshot) {
-            renderBattleSceneSlots(battlePlayerSlots, lastSnapshot.player, 'player', report);
-            renderBattleSceneSlots(battleOpponentSlots, lastSnapshot.opponent, 'opponent', report);
-          }
-        } else if (opponentIdx >= 0) {
-          const cur = Math.max(0, Number(state.battleManaBySide?.opponent?.[opponentIdx] || 0));
-          state.battleManaBySide.opponent[opponentIdx] = manaGain ? cur + amount : Math.max(0, cur - amount);
-          if (lastSnapshot) {
-            renderBattleSceneSlots(battlePlayerSlots, lastSnapshot.player, 'player', report);
-            renderBattleSceneSlots(battleOpponentSlots, lastSnapshot.opponent, 'opponent', report);
+      let manaUiChanged = false;
+      const manaGive = text.match(/^(.+?) gave (.+?)\s+\+?(\d+)\s+mana\b/i)
+        || text.match(/^(.+?) gave (.+?)\s+an extra\s+(\d+)\s+bonus mana\b/i);
+      if (manaGive) {
+        const targetName = String(manaGive[2] || '').trim().replace(/[.]+$/, '');
+        const amount = Number(manaGive[3] || 0);
+        if (targetName && amount > 0) {
+          if (/\bfriend(s)?\b/i.test(targetName)) {
+            const ownerName = String(manaGive[1] || '').trim();
+            const ownerPlayerIdx = findSnapshotPetIndexByName(lastSnapshot?.player, ownerName);
+            const ownerOpponentIdx = findSnapshotPetIndexByName(lastSnapshot?.opponent, ownerName);
+            const ownerSide = ownerPlayerIdx >= 0 ? 'player' : (ownerOpponentIdx >= 0 ? 'opponent' : '');
+            const ownerIdx = ownerPlayerIdx >= 0 ? ownerPlayerIdx : ownerOpponentIdx;
+            if (ownerSide && ownerIdx >= 0) {
+              const countMatch = targetName.match(/(\d+)\s+friends?/i);
+              const friendCount = Math.max(1, Number(countMatch?.[1] || 1));
+              let applied = 0;
+              for (let t = ownerIdx + 1; t < BOARD_SIZE && applied < friendCount; t += 1) {
+                const candidate = lastSnapshot?.[ownerSide]?.[t];
+                if (!candidate) continue;
+                manaUiChanged = applyBattleManaDelta(lastSnapshot, candidate.name, amount) || manaUiChanged;
+                applied += 1;
+              }
+            }
+          } else {
+            manaUiChanged = applyBattleManaDelta(lastSnapshot, targetName, amount) || manaUiChanged;
           }
         }
+      }
+      const manaGain = text.match(/^(.+?)\s+gain(?:ed|s)?\s+\+?(\d+)\s+mana\b/i);
+      if (manaGain) {
+        const owner = String(manaGain[1] || '').trim().replace(/[.]+$/, '');
+        const amount = Number(manaGain[2] || 0);
+        manaUiChanged = applyBattleManaDelta(lastSnapshot, owner, amount) || manaUiChanged;
+      }
+      const manaSpendFrom = text.match(/^(.+?)\s+spent\s+(\d+)\s+mana\s+from\s+(.+?)\s+to\b/i);
+      if (manaSpendFrom) {
+        const source = String(manaSpendFrom[3] || '').trim().replace(/[.]+$/, '');
+        const amount = Number(manaSpendFrom[2] || 0);
+        manaUiChanged = applyBattleManaDelta(lastSnapshot, source, -amount) || manaUiChanged;
+      }
+      const manaSpent = text.match(/^(.+?)\s+spent\s+(\d+)\s+mana\b/i);
+      if (manaSpent) {
+        const owner = String(manaSpent[1] || '').trim().replace(/[.]+$/, '');
+        const amount = Number(manaSpent[2] || 0);
+        manaUiChanged = applyBattleManaDelta(lastSnapshot, owner, -amount) || manaUiChanged;
+      }
+      const manaTaken = text.match(/^(.+?)\s+took\s+(\d+)\s+mana\s+from\s+(.+?)\.?$/i);
+      if (manaTaken) {
+        const owner = String(manaTaken[1] || '').trim().replace(/[.]+$/, '');
+        const source = String(manaTaken[3] || '').trim().replace(/[.]+$/, '');
+        const amount = Number(manaTaken[2] || 0);
+        manaUiChanged = applyBattleManaDelta(lastSnapshot, owner, amount) || manaUiChanged;
+        manaUiChanged = applyBattleManaDelta(lastSnapshot, source, -amount) || manaUiChanged;
+      }
+      if (manaUiChanged && lastSnapshot) {
+        renderBattleSceneSlots(battlePlayerSlots, lastSnapshot.player, 'player', report);
+        renderBattleSceneSlots(battleOpponentSlots, lastSnapshot.opponent, 'opponent', report);
+      }
+      const geckoBreakNote = tryTriggerGeckoToyBreakFromFaintLog(text, lastSnapshot);
+      if (geckoBreakNote) {
+        sceneLines.push(`[TOY_BREAK] ${geckoBreakNote}`);
+        battleSceneLog.textContent = sceneLines.slice(-14).join('\n');
+        renderBattleTeamToyDisplays(report);
       }
       updateBattleStatusLine();
     }
@@ -1602,6 +1885,14 @@ function parseToyChoiceLevelFromAbility(abilityText, fallbackLevel = 1) {
   return 0;
 }
 
+function parseToySourceFromAbility(abilityText = '') {
+  const text = String(abilityText || '').trim();
+  if (!text) return '';
+  const explicit = text.match(/Choose one level\s*\d+\s+(.+?)\s+toy/i);
+  if (!explicit) return '';
+  return String(explicit[1] || '').trim();
+}
+
 function parseCountWord(raw) {
   const s = String(raw || '').trim().toLowerCase();
   if (/^\d+$/.test(s)) return Number(s);
@@ -1635,6 +1926,12 @@ function queueNextTurnGold(amount) {
   return add;
 }
 
+function resolveTurnStartGold() {
+  const storedBonus = Math.max(0, Number(state.nextTurnBonusGold || 0));
+  if (storedBonus > 0) return START_GOLD + storedBonus;
+  return START_GOLD;
+}
+
 function parseNextTurnGoldFromAbility(abilityText) {
   const text = String(abilityText || '').trim();
   if (!text) return 0;
@@ -1643,6 +1940,13 @@ function parseNextTurnGoldFromAbility(abilityText) {
   // Covers wording like: "...and +2 gold next turn."
   const embedded = text.match(/\+(\d+)\s+gold(?:\s+on)?\s+next\s+turn/i);
   return Math.max(0, Number(embedded?.[1] || 0));
+}
+
+function parseNextTurnFreeRollsFromAbility(abilityText) {
+  const text = String(abilityText || '').trim();
+  if (!text) return 0;
+  const direct = text.match(/Gain\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+free\s+rolls?\s+next\s+turn/i);
+  return Math.max(0, parseCountWord(direct?.[1] || ''));
 }
 
 function logsContainNextTurnGoldForPet(logs, petName = '') {
@@ -1687,6 +1991,26 @@ function getNextTurnGoldForTrigger(petName, levelInt = 1, triggerLabel = '') {
   return parseNextTurnGoldFromAbility(abilityText);
 }
 
+function getNextTurnFreeRollsForTrigger(petName, levelInt = 1, triggerLabel = '') {
+  const trigger = String(triggerLabel || '').trim().toLowerCase();
+  if (!trigger) return 0;
+  const abilityText = getAbilityTextForPetLevel(petName, levelInt);
+  if (!abilityText) return 0;
+  const prefixMap = {
+    faint: /^Faint:/i,
+    sell: /^Sell:/i,
+    end: /^End turn:/i,
+    start: /^Start of turn:/i,
+    levelup: /^Level-up:/i,
+    level: /^Level-up:/i,
+    level_up: /^Level-up:/i,
+    roll: /^Roll:/i
+  };
+  const expected = prefixMap[trigger];
+  if (!expected || !expected.test(abilityText)) return 0;
+  return parseNextTurnFreeRollsFromAbility(abilityText);
+}
+
 function parseImmediateGoldFromAbility(abilityText) {
   const text = String(abilityText || '').trim();
   if (!text) return 0;
@@ -1714,6 +2038,67 @@ function getImmediateGoldForTrigger(petName, levelInt = 1, triggerLabel = '') {
   const expected = prefixMap[trigger];
   if (!expected || !expected.test(abilityText)) return 0;
   return parseImmediateGoldFromAbility(abilityText);
+}
+
+function getMagpieStoredGoldCap(levelInt = 1) {
+  const lvl = Math.max(1, Math.min(3, Number(levelInt || 1)));
+  return Number(MAGPIE_STORED_GOLD_CAP_BY_LEVEL[lvl] || MAGPIE_STORED_GOLD_CAP_BY_LEVEL[1] || 1);
+}
+
+function getLemmingNextTurnGold(levelInt = 1) {
+  const lvl = Math.max(1, Math.min(3, Number(levelInt || 1)));
+  return lvl;
+}
+
+function queueNextTurnFreeRolls(amount) {
+  const add = Math.max(0, Number(amount || 0));
+  if (!add) return 0;
+  state.nextTurnFreeRolls = Math.max(0, Number(state.nextTurnFreeRolls || 0)) + add;
+  return add;
+}
+
+function queueImmediateFreeRollsFromLogs(logs = []) {
+  const lines = Array.isArray(logs) ? logs : [];
+  let gained = 0;
+  lines.forEach((line) => {
+    const text = stripHtmlToText(String(line || ''));
+    if (!/free\s+roll/i.test(text)) return;
+    const m = text.match(/gain(?:ed|s)?\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)?\s*free\s+roll/i);
+    const parsed = parseCountWord(m?.[1] || 'one');
+    gained += Math.max(0, parsed || 1);
+  });
+  if (gained > 0) {
+    state.freeRolls = Math.max(0, Number(state.freeRolls || 0)) + gained;
+  }
+  return gained;
+}
+
+function applyBridgeEndTurnGoldEffects(logs = []) {
+  const lines = Array.isArray(logs) ? logs.map((x) => String(x || '')) : [];
+  if (!lines.length) return 0;
+  let queued = 0;
+  const magpies = state.board
+    .filter(Boolean)
+    .filter((pet) => normalizeName(pet?.name || '') === 'magpie')
+    .map((pet) => getPetLevelInt(pet))
+    .sort((a, b) => b - a);
+  if (!magpies.length) return 0;
+
+  lines.forEach((line) => {
+    const text = stripHtmlToText(line);
+    if (!/magpie/i.test(text)) return;
+    if (!/gain\s+it\s+back\s+next\s+turn/i.test(text)) return;
+    const parsedCap = Number((text.match(/spent\s+up\s+to\s+(\d+)\s+gold/i) || [])[1] || 0);
+    const level = magpies.shift() || 1;
+    const levelCap = getMagpieStoredGoldCap(level);
+    const cap = Math.max(0, parsedCap || levelCap);
+    const spend = Math.max(0, Math.min(cap, Number(state.gold || 0)));
+    if (!spend) return;
+    state.gold = Math.max(0, Number(state.gold || 0) - spend);
+    queued += queueNextTurnGold(spend);
+  });
+
+  return queued;
 }
 
 function queueBattleNextTurnGoldFromReport(report) {
@@ -1789,6 +2174,31 @@ function queueBattleNextTurnGoldFromReport(report) {
   return queued;
 }
 
+function queueNextTurnFreeRollsFromLogs(logs = [], triggerHint = '') {
+  const lines = Array.isArray(logs) ? logs : [];
+  let queued = 0;
+  lines.forEach((entry) => {
+    const raw = String(entry?.message || entry || '');
+    if (!raw || extractBattleSnapshot(raw)) return;
+    const text = stripHtmlToText(raw);
+    if (!/free\s+roll/i.test(text) || !/next\s+turn/i.test(text)) return;
+    const m = text.match(/(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+free\s+rolls?\s+next\s+turn/i);
+    const amount = Math.max(0, parseCountWord(m?.[1] || ''));
+    if (amount > 0) queued += queueNextTurnFreeRolls(amount);
+  });
+  if (queued > 0) return queued;
+
+  // Fallback inference for concise logs that omit explicit amount.
+  const trigger = String(triggerHint || '').trim().toLowerCase();
+  if (!trigger) return 0;
+  state.board.filter(Boolean).forEach((pet) => {
+    const lvl = getPetLevelInt(pet);
+    const inferred = getNextTurnFreeRollsForTrigger(pet.name, lvl, trigger);
+    if (inferred > 0) queued += queueNextTurnFreeRolls(inferred);
+  });
+  return queued;
+}
+
 function mergeStackedPetStats(basePet, targetPet, sourcePet) {
   const merged = { ...(basePet || {}) };
   const targetAtk = Math.max(1, Number(targetPet?.baseAttack || 1));
@@ -1806,7 +2216,7 @@ function mergeStackedPetStats(basePet, targetPet, sourcePet) {
   const sourceScore = sourceAtk + sourceHp;
   const preferred = sourceScore > targetScore ? sourcePet : targetPet;
   const persistentFields = [
-    'equipment', 'mana', 'tempBuffs', 'triggersConsumed', 'foodsEaten',
+    'equipment', 'mana', 'triggersConsumed', 'foodsEaten',
     'battlesFought', 'timesHurt', 'friendsDiedBeforeBattle', 'sellValue',
     'copiedAbilityName', 'copiedAbilityLevel', 'copyExpiresTurn', 'calcPetState'
   ];
@@ -1815,6 +2225,9 @@ function mergeStackedPetStats(basePet, targetPet, sourcePet) {
       merged[field] = cloneSerializable(preferred[field]);
     }
   });
+  const targetTempBuffs = Array.isArray(targetPet?.tempBuffs) ? targetPet.tempBuffs.map((b) => ({ ...b })) : [];
+  const sourceTempBuffs = Array.isArray(sourcePet?.tempBuffs) ? sourcePet.tempBuffs.map((b) => ({ ...b })) : [];
+  merged.tempBuffs = [...targetTempBuffs, ...sourceTempBuffs];
   return merged;
 }
 
@@ -1835,16 +2248,17 @@ function extractToyCatalogFromCalculatorSource(source) {
   const segment = source.slice(start, end);
   const out = [];
   const seen = new Set();
-  const rx = /Name:\s*"([^"]+)"[\s\S]*?Tier:\s*(\d+)/g;
+  const rx = /Name:\s*"([^"]+)"[\s\S]*?Tier:\s*(\d+)[\s\S]*?(?:Random:\s*(true|false))?/g;
   let m;
   while ((m = rx.exec(segment)) !== null) {
     const name = String(m[1] || '').trim();
     const tierNum = Number(m[2] || 1);
     const tier = Math.max(1, Math.min(6, Number.isFinite(tierNum) ? tierNum : 1));
+    const random = String(m[3] || '').toLowerCase() === 'true';
     const key = normalizeName(name);
     if (!name || seen.has(key)) continue;
     seen.add(key);
-    out.push({ name, tier });
+    out.push({ name, tier, random });
   }
   return out;
 }
@@ -1853,10 +2267,47 @@ function renderToyPickerOptions() {
   renderActiveToyDisplay();
 }
 
-function getAllowedToyChoicesForSource(sourcePetName, toyTier) {
-  const key = normalizeName(sourcePetName);
-  const pool = TOYS_BY_SOURCE[key] || [];
-  if (!pool.length) return [];
+function getFallbackToyChoicesByTier(toyTier) {
+  const requestedTier = Math.max(1, Math.min(6, Number(toyTier || 1)));
+  const catalog = Array.isArray(state.toyCatalog) ? state.toyCatalog : [];
+  return catalog
+    .filter((toy) => Number(toy?.tier || 0) === requestedTier)
+    .filter((toy) => !Boolean(toy?.random))
+    .map((toy) => ({
+      name: String(toy.name || '').trim(),
+      tier: requestedTier
+    }))
+    .filter((toy) => toy.name.length > 0);
+}
+
+function dedupeToyChoices(choices = []) {
+  const seen = new Set();
+  const out = [];
+  choices.forEach((toy) => {
+    const name = String(toy?.name || '').trim();
+    const key = normalizeName(name);
+    if (!name || seen.has(key)) return;
+    seen.add(key);
+    out.push(toy);
+  });
+  return out;
+}
+
+function getAllowedToyChoicesForSource(sourcePetName, toyTier, abilityText = '') {
+  const sourceFromText = parseToySourceFromAbility(abilityText);
+  const resolvedSource = sourceFromText || sourcePetName;
+  const key = normalizeName(resolvedSource);
+  const pool = dedupeToyChoices((TOYS_BY_SOURCE[key] || [])
+    .filter((toy) => isToyValidForPackAndTurn(toy.name, state.currentPackId, state.turn)));
+  if (!pool.length) {
+    const text = String(abilityText || '').trim();
+    if (/witch toy/i.test(text)) {
+      return dedupeToyChoices((TOYS_BY_SOURCE[normalizeName('Cuddle Toad')] || [])
+        .filter((toy) => isToyValidForPackAndTurn(toy.name, state.currentPackId, state.turn)));
+    }
+    // Never show broad/random global toy pools when source mapping is missing.
+    return [];
+  }
   const numericTier = Number(toyTier || 1);
   const exact = pool.filter((toy) => typeof toy.tier === 'number' && Number(toy.tier) === numericTier);
   if (exact.length) return exact;
@@ -1866,8 +2317,14 @@ function getAllowedToyChoicesForSource(sourcePetName, toyTier) {
 }
 
 function chooseAutoToy(toyLevel = 1, abilityText = '', options = {}) {
+  if (!doesPackSupportToys(state.currentPackId)) {
+    state.toyChoices = [];
+    state.toyChoiceContext = null;
+    renderToyChoiceDisplay();
+    return null;
+  }
   const petName = String(options?.petName || '').trim();
-  const pool = getAllowedToyChoicesForSource(petName, toyLevel);
+  const pool = getAllowedToyChoicesForSource(petName, toyLevel, abilityText);
   state.toyChoices = [...pool];
   state.toyChoiceContext = {
     sourcePet: petName || '',
@@ -1934,6 +2391,8 @@ function hydrateLevelFields(pet, exp) {
 function createBoardPetFromShopPet(shopPet) {
   return hydrateLevelFields({
     ...shopPet,
+    path: resolvePetTexture(shopPet?.name || '') || shopPet?.path || null,
+    sellValue: Math.max(1, Number(shopPet?.sellValue || 1)),
     tempBuffs: []
   }, 0);
 }
@@ -2070,6 +2529,223 @@ function getToyMetaByName(toyName = '') {
   return TOYS_BY_NAME[normalizeName(toyName)] || null;
 }
 
+function getToyPackLabelById(packId) {
+  const calcPack = CALCULATOR_PACK_BY_APP_ID[Number(packId)];
+  return calcPack ? `${calcPack} Pack` : '';
+}
+
+function getToyUnlockTier(toyMeta) {
+  const raw = toyMeta?.tier;
+  if (typeof raw === 'number') return Math.max(1, Math.min(6, Math.trunc(raw)));
+  if (typeof raw === 'string') {
+    const match = raw.match(/(\d+)/);
+    if (match) return Math.max(1, Math.min(6, Number(match[1])));
+  }
+  return 1;
+}
+
+function isToyAvailableOnTurn(toyMeta, turn) {
+  if (!toyMeta) return false;
+  const unlockTier = getToyUnlockTier(toyMeta);
+  return maxTierForTurn(turn) >= unlockTier;
+}
+
+function doesPackSupportToys(packId) {
+  const packLabel = getToyPackLabelById(packId);
+  if (!packLabel) return false;
+  return TOY_DEFINITIONS.some((toy) => normalizeName(toy.pack) === normalizeName(packLabel));
+}
+
+function isToyValidForPackAndTurn(toyName, packId, turn) {
+  const meta = getToyMetaByName(toyName);
+  if (!meta) return false;
+  const packLabel = getToyPackLabelById(packId);
+  if (!packLabel || normalizeName(meta.pack) !== normalizeName(packLabel)) return false;
+  return isToyAvailableOnTurn(meta, turn);
+}
+
+function syncLegacyPlayerToyFields() {
+  const toy = state.teamToys?.player || null;
+  if (!toy || Number(toy.remaining_turns || 0) <= 0) {
+    state.playerToy = null;
+    state.playerToyLevel = 1;
+    state.playerToyExplicitlySelected = false;
+    return;
+  }
+  state.playerToy = toy.toy_id;
+  state.playerToyLevel = Math.max(1, Math.min(3, Number(toy.toy_level || 1)));
+}
+
+function buildTeamToyState(toyName, toyLevel, packId) {
+  const sourcePack = getToyPackLabelById(packId);
+  return {
+    toy_id: String(toyName || ''),
+    remaining_turns: 2,
+    source_pack: sourcePack || '',
+    activation_state: 'active',
+    toy_level: Math.max(1, Math.min(3, Number(toyLevel || 1)))
+  };
+}
+
+function getActiveTeamToy(side) {
+  const toy = state.teamToys?.[side] || null;
+  if (!toy) return null;
+  if (Number(toy.remaining_turns || 0) <= 0) return null;
+  return toy;
+}
+
+function getToyBreakAbilityKind(effectText = '') {
+  const text = String(effectText || '').trim();
+  if (!/^Break:/i.test(text)) return '';
+  if (/^Break:\s*Give right-most friend\s+\+\d+\/\+\d+/i.test(text)) return 'right_most_friend_buff_scaled';
+  if (/^Break:\s*Give all friends \+health/i.test(text)) return 'all_friends_health_scaled';
+  if (/^Break:\s*Stock free Lasagnas/i.test(text)) return 'stock_lasagna_scaled';
+  if (/^Break:\s*Give right-most friends Melon perk/i.test(text)) return 'right_most_friends_melon_scaled';
+  if (/^Break:\s*Summon a Treasure Chest/i.test(text)) return 'summon_treasure_chest';
+  if (/^Break:\s*Stock free pet from Tier/i.test(text)) return 'stock_tier_pet_scaled';
+  if (/^Break:\s*Summon free Holy Water/i.test(text)) return 'stock_holy_water_scaled';
+  return '';
+}
+
+function getToyBreakMetadata(toyName = '') {
+  const toyMeta = getToyMetaByName(toyName);
+  if (!toyMeta) return null;
+  const breakAbilityKind = getToyBreakAbilityKind(toyMeta.effect);
+  return {
+    ...toyMeta,
+    has_break_ability: /^Break:/i.test(String(toyMeta.effect || '').trim()),
+    break_ability_kind: breakAbilityKind || null
+  };
+}
+
+function getRightMostBoardPetIndices(count = 1) {
+  const out = [];
+  for (let i = BOARD_SIZE - 1; i >= 0; i -= 1) {
+    if (!state.board[i]) continue;
+    out.push(i);
+    if (out.length >= count) break;
+  }
+  return out;
+}
+
+function executeToyBreakAbility(event) {
+  const side = String(event?.side || '');
+  const toyState = event?.toyState || null;
+  const toyName = String(toyState?.toy_id || '').trim();
+  const toyLevel = Math.max(1, Math.min(3, Number(toyState?.toy_level || 1)));
+  const meta = getToyBreakMetadata(toyName);
+  if (!meta || !meta.has_break_ability) {
+    return { ok: false, note: `No break ability metadata for ${toyName || 'unknown toy'}.` };
+  }
+  if (!meta.break_ability_kind) {
+    return { ok: false, note: `${toyName}: break text exists but no functional executor.` };
+  }
+  if (side !== 'player') {
+    return { ok: true, note: `${toyName}: opponent break event acknowledged.` };
+  }
+
+  const levelScale = Math.max(1, Math.min(3, toyLevel));
+  if (meta.break_ability_kind === 'right_most_friend_buff_scaled') {
+    const base = Number((String(meta.effect || '').match(/\+(\d+)\/\+\d+/i) || [])[1] || 1);
+    const idx = getRightMostBoardPetIndices(1)[0];
+    if (!Number.isInteger(idx)) return { ok: true, note: `${toyName}: no target friend for break buff.` };
+    const amount = Math.max(1, base * levelScale);
+    buffPetAt(idx, amount, amount, { perkText: `${toyName.toUpperCase()} BREAK` });
+    return { ok: true, note: `${toyName}: gave right-most friend +${amount}/+${amount}.` };
+  }
+  if (meta.break_ability_kind === 'all_friends_health_scaled') {
+    const amount = levelScale;
+    getBoardPetIndices().forEach((idx) => buffPetAt(idx, 0, amount, { perkText: `${toyName.toUpperCase()} BREAK` }));
+    return { ok: true, note: `${toyName}: gave all friends +${amount} health.` };
+  }
+  if (meta.break_ability_kind === 'stock_lasagna_scaled') {
+    const lasagna = getTemplateFoodByName('Lasagna')
+      || getAllFoodsAcrossPacks().find((f) => normalizeName(f.name) === 'lasagna');
+    if (!lasagna) return { ok: false, note: `${toyName}: Lasagna template missing.` };
+    for (let i = 0; i < levelScale; i += 1) {
+      stockFoodInShop({
+        name: lasagna.name,
+        tier: Number(lasagna.tier || 3),
+        ability: String(lasagna.ability || ''),
+        cost: 0,
+        path: resolveTexture(lasagna.name)
+      });
+    }
+    return { ok: true, note: `${toyName}: stocked ${levelScale} free Lasagna.` };
+  }
+  if (meta.break_ability_kind === 'right_most_friends_melon_scaled') {
+    const targets = getRightMostBoardPetIndices(levelScale);
+    targets.forEach((idx) => setPetPerk(idx, 'Melon'));
+    return { ok: true, note: `${toyName}: gave Melon to ${targets.length} right-most friend(s).` };
+  }
+  if (meta.break_ability_kind === 'summon_treasure_chest') {
+    state.teamToys.player = buildTeamToyState('Treasure Chest', toyLevel, state.currentPackId);
+    syncLegacyPlayerToyFields();
+    return { ok: true, note: `${toyName}: summoned Treasure Chest.` };
+  }
+  if (meta.break_ability_kind === 'stock_tier_pet_scaled') {
+    const tiers = [2, 4, 6];
+    const tier = tiers[Math.max(0, Math.min(2, levelScale - 1))];
+    const pack = state.packs[String(state.currentPackId)];
+    const pool = (pack?.pets || []).filter((p) => Number(p.tier || 1) === tier);
+    const pick = randFrom(pool);
+    if (!pick) return { ok: false, note: `${toyName}: no tier ${tier} pet available to stock.` };
+    placeTierUpPetIntoShop({
+      ...pick,
+      baseAttack: Math.max(1, Number(pick.baseAttack || 1)),
+      baseHealth: Math.max(1, Number(pick.baseHealth || 1))
+    });
+    return { ok: true, note: `${toyName}: stocked free tier ${tier} pet (${pick.name}).` };
+  }
+  if (meta.break_ability_kind === 'stock_holy_water_scaled') {
+    const holy = getTemplateFoodByName('Holy Water')
+      || getAllFoodsAcrossPacks().find((f) => normalizeName(f.name) === 'holywater');
+    if (!holy) return { ok: false, note: `${toyName}: Holy Water template missing.` };
+    for (let i = 0; i < levelScale; i += 1) {
+      stockFoodInShop({
+        name: holy.name,
+        tier: Number(holy.tier || 6),
+        ability: String(holy.ability || ''),
+        cost: 0,
+        path: resolveTexture(holy.name)
+      });
+    }
+    return { ok: true, note: `${toyName}: stocked ${levelScale} free Holy Water.` };
+  }
+  return { ok: false, note: `${toyName}: unhandled break ability kind ${meta.break_ability_kind}.` };
+}
+
+function dispatchToyBreakEvent(input = {}) {
+  const side = String(input?.side || '');
+  const toyState = input?.toyState ? { ...input.toyState } : null;
+  const toyId = String(toyState?.toy_id || '').trim();
+  if (!side || !toyId) {
+    return { ok: false, note: 'Invalid toy break event payload.' };
+  }
+  const eventKey = [
+    String(input?.source || 'unknown'),
+    side,
+    normalizeName(toyId),
+    Math.max(1, Math.min(3, Number(toyState?.toy_level || 1))),
+    String(input?.nonce || state.turn)
+  ].join(':');
+  if (state.toyBreakEventSeen[eventKey]) {
+    return { ok: true, note: `${toyId}: break event already processed.` };
+  }
+  state.toyBreakEventSeen[eventKey] = true;
+  const result = executeToyBreakAbility({ ...input, side, toyState });
+  if (Array.isArray(state.toyBreakListeners)) {
+    state.toyBreakListeners.forEach((listener) => {
+      try {
+        listener({ type: 'TOY_BREAK', side, toyState: { ...toyState }, result, source: input?.source || 'unknown' });
+      } catch (_) {
+        // Listener failures should not block game state updates.
+      }
+    });
+  }
+  return result;
+}
+
 function tooltipTextForToy(toy) {
   const name = String(toy?.name || '').trim();
   const meta = getToyMetaByName(name);
@@ -2195,9 +2871,11 @@ function bindHoverTooltip(el, kind, item) {
 
 function renderCardImage(item) {
   if (item && item.path) {
+    const isPetLike = Boolean(item?.ability && typeof item.ability === 'object');
+    const safePath = isPetLike ? (resolvePetTexture(item?.name || '') || item.path) : item.path;
     const img = document.createElement('img');
     img.className = 'card-art';
-    img.src = item.path;
+    img.src = safePath;
     img.alt = item.name;
     return img;
   }
@@ -2300,12 +2978,15 @@ function createAilmentBadgeElement(ailmentName) {
   return badge;
 }
 
-function createManaBadgeElement(mana) {
+function createManaBadgeElement(mana, options = {}) {
   const amount = Math.max(0, Number(mana || 0));
-  if (amount <= 0) return null;
+  const delta = Number(options?.delta || 0);
+  const floatingGain = Math.max(0, Number(options?.floatingGain || 0));
   const tex = resolveTexture('ManaPotion_2x') || resolveTexture('ManaPotion');
   const badge = document.createElement('div');
   badge.className = 'mana-overlay';
+  if (delta > 0) badge.classList.add('mana-gain');
+  if (delta < 0) badge.classList.add('mana-loss');
   badge.title = `Mana: ${amount}`;
   if (tex) {
     const img = document.createElement('img');
@@ -2316,6 +2997,12 @@ function createManaBadgeElement(mana) {
   const text = document.createElement('span');
   text.textContent = String(amount);
   badge.appendChild(text);
+  if (floatingGain > 0) {
+    const float = document.createElement('div');
+    float.className = 'mana-float';
+    float.textContent = `+${floatingGain} Mana`;
+    badge.appendChild(float);
+  }
   return badge;
 }
 
@@ -2533,6 +3220,35 @@ function foodNeedsTarget(food) {
   return /one pet|a pet/i.test(ability);
 }
 
+function resolveWhaleSharkTriggerAt(idx, reason = 'gain') {
+  const pet = state.board[idx];
+  if (!pet) return false;
+  if (normalizeName(pet.name) !== 'whaleshark') return false;
+  const lvl = Math.max(1, Math.min(3, Number(getPetLevelInt(pet) || 1)));
+  const battleMult = state.phase === 'battle' ? 3 : 1;
+  const amount = lvl * battleMult;
+  pet.equipment = null;
+  buffPetAt(idx, amount, amount, { perkText: 'WHALE SHARK' });
+  pulseShopAbilityAt(idx, 'Whale Shark');
+  setStatus(`Whale Shark (${reason}): removed perk/ailment and gained +${amount}/+${amount}.`);
+  return true;
+}
+
+function clearPetEquipment(idx, reason = 'effect') {
+  const pet = state.board[idx];
+  if (!pet) return '';
+  const previous = String(pet.equipment || '').trim();
+  if (!previous) return '';
+  if (useCalculatorShopBridge()) {
+    triggerCalculatorPerkLost(idx, previous);
+  }
+  pet.equipment = null;
+  if (normalizeName(pet.name) === 'whaleshark') {
+    resolveWhaleSharkTriggerAt(idx, reason);
+  }
+  return previous;
+}
+
 function setPetPerk(idx, perkName, sourceEl = null) {
   const pet = state.board[idx];
   if (!pet || !perkName) return;
@@ -2545,6 +3261,11 @@ function setPetPerk(idx, perkName, sourceEl = null) {
   pet.equipment = nextPerk;
   if (useCalculatorShopBridge()) {
     triggerCalculatorPerkGained(idx, perkName);
+    // Bridge sync can drop equipment fields for shop pets; preserve explicit local perk.
+    const live = state.board[idx];
+    if (live && normalizeName(live.name) !== 'whaleshark') {
+      live.equipment = nextPerk;
+    }
   }
   animateBoardStatDelta({
     scope: 'shop',
@@ -2569,6 +3290,66 @@ function setPetPerk(idx, perkName, sourceEl = null) {
       });
       setTimeout(() => token.remove(), 430);
     }
+  }
+  if (normalizeName(pet.name) === 'whaleshark') {
+    resolveWhaleSharkTriggerAt(idx, 'perk gained');
+  }
+}
+
+function setPetAilment(idx, ailmentName, sourceEl = null) {
+  const pet = state.board[idx];
+  if (!pet || !ailmentName) return;
+  const canonicalAilment = getCanonicalAilmentName(ailmentName);
+  if (!canonicalAilment) return;
+  const previousPerk = getPetPerkName(pet);
+  pet.equipment = canonicalAilment;
+  if (useCalculatorShopBridge()) {
+    if (previousPerk && normalizeName(previousPerk) !== normalizeName(canonicalAilment)) {
+      triggerCalculatorPerkLost(idx, previousPerk);
+    }
+    const ctx = createCalculatorShopContext();
+    const calcPet = ctx?.player?.getPet?.(idx);
+    if (calcPet && typeof ctx?.runner?.abilityService?.triggerAilmentGainEvents === 'function') {
+      const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
+      ctx.runner.abilityService.triggerAilmentGainEvents(calcPet, canonicalAilment);
+      runCalculatorAbilityQueue(ctx.runner);
+      syncBridgeCountersFromGameApi(ctx.runner?.gameService?.gameApi);
+      syncBoardStateFromCalculatorPlayer(ctx.player);
+      const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+      pushDebugTrigger('AilmentGain', `Ailment gained at slot ${idx + 1}: ${canonicalAilment}.`, out);
+    }
+    // Bridge sync can drop equipment fields for shop pets; preserve explicit local ailment.
+    const live = state.board[idx];
+    if (live && normalizeName(live.name) !== 'whaleshark') {
+      live.equipment = canonicalAilment;
+    }
+  }
+  animateBoardStatDelta({
+    scope: 'shop',
+    toIdx: idx,
+    perkText: canonicalAilment.toUpperCase()
+  });
+  if (sourceEl) {
+    const targetEl = getBoardSlotElement(idx);
+    if (targetEl) {
+      const token = document.createElement('div');
+      token.className = 'fx-fly-icon';
+      token.textContent = canonicalAilment.toUpperCase();
+      const fromRect = sourceEl.getBoundingClientRect();
+      token.style.left = `${fromRect.left + fromRect.width / 2}px`;
+      token.style.top = `${fromRect.top + fromRect.height / 2}px`;
+      document.body.appendChild(token);
+      requestAnimationFrame(() => {
+        const toRect = targetEl.getBoundingClientRect();
+        token.style.left = `${toRect.left + toRect.width / 2}px`;
+        token.style.top = `${toRect.top + toRect.height / 2}px`;
+        token.style.opacity = '0';
+      });
+      setTimeout(() => token.remove(), 430);
+    }
+  }
+  if (normalizeName(pet.name) === 'whaleshark') {
+    resolveWhaleSharkTriggerAt(idx, 'ailment gained');
   }
 }
 
@@ -2636,7 +3417,7 @@ function applySpecialFoodEffect(food, targetIdx, foodRef) {
     if (!pet) return { ok: false, note: 'No target pet.' };
     const m = ability.match(/Give one pet \+(\d+) attack and Weak/i);
     buffPetAt(targetIdx, Number(m?.[1] || 0), 0);
-    setPetPerk(targetIdx, 'Weak', foodRef ? getFoodSlotElement(foodRef.listName, foodRef.idx) : null);
+    setPetAilment(targetIdx, 'Weak', foodRef ? getFoodSlotElement(foodRef.listName, foodRef.idx) : null);
     return { ok: true, note: `${food.name}: attack + weak` };
   }
 
@@ -2869,7 +3650,7 @@ function applyFoodToBoardPet(food, targetIdx, foodRef = null) {
     state.board[targetIdx] = bumped.pet;
     applyLuckyCatLevelUpNextTurnGold(state.board[targetIdx], bumped.prevLevelInt, bumped.newLevelInt);
     animateShopXpFillAt(targetIdx);
-    maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt);
+    maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt, targetIdx);
     if (bumped.newLevelInt > bumped.prevLevelInt) {
       animateLevelUpAt('shop', targetIdx);
     }
@@ -2900,7 +3681,7 @@ function makeTokenPet(name, attack, health, tier = 1) {
     baseAttack: attack,
     baseHealth: health,
     ability: { level1: '', level2: '', level3: '' },
-    path: resolveTexture(name)
+    path: resolvePetTexture(name)
   }, 0);
 }
 
@@ -2983,8 +3764,9 @@ function summarizeTeamLevels(pets) {
 }
 
 function parseToyConfigFromUi() {
-  const toyName = String(state.playerToy || '').trim();
-  const toyLevel = Math.max(1, Math.min(3, Number(state.playerToyLevel || 1)));
+  const playerToy = getActiveTeamToy('player');
+  const toyName = String(playerToy?.toy_id || state.playerToy || '').trim();
+  const toyLevel = Math.max(1, Math.min(3, Number(playerToy?.toy_level || state.playerToyLevel || 1)));
   return {
     playerToy: toyName || null,
     playerToyLevel: toyName ? toyLevel : 1
@@ -3017,6 +3799,10 @@ function isAuthoritativeMechanicsReady() {
 
 function useCalculatorShopBridge() {
   return state.currentPackId >= 1 && state.currentPackId <= 6 && isAuthoritativeMechanicsReady();
+}
+
+function isStrictAuthoritativePack() {
+  return Number(state.currentPackId) === 2 && useCalculatorShopBridge();
 }
 
 function boardPetToShopCalcPetConfig(pet) {
@@ -3172,13 +3958,8 @@ function syncBoardStateFromCalculatorPlayer(player) {
     }
   }
   state.gold = Math.max(0, Number.isFinite(Number(player.gold)) ? Number(player.gold) : state.gold);
-  if (player.toy?.name) {
-    state.playerToy = player.toy.name;
-    state.playerToyLevel = Math.max(1, Math.min(3, Number(player.toy.level || 1)));
-  } else {
-    state.playerToy = null;
-    state.playerToyLevel = 1;
-  }
+  // Toy ownership is controlled only by explicit app events (selection/grants), never by bridge sync.
+  syncLegacyPlayerToyFields();
 }
 
 function createCalculatorShopContext() {
@@ -3462,9 +4243,9 @@ function triggerCalculatorSpendGold(amount) {
 
 function triggerCalculatorRoll() {
   const ctx = createCalculatorShopContext();
-  if (!ctx) return;
+  if (!ctx) return [];
   const aq = ctx.runner.abilityService?.abilityQueueService;
-  if (!aq) return;
+  if (!aq) return [];
   const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   ctx.player.petArray.forEach((pet) => {
     aq.triggerAbility(pet, 'Roll', pet, { trigger: 'Roll' });
@@ -3480,6 +4261,7 @@ function triggerCalculatorRoll() {
   syncBoardStateFromCalculatorPlayer(ctx.player);
   const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
   pushDebugTrigger('Roll', 'Roll trigger processed.', out);
+  return out;
 }
 
 function triggerCalculatorFoodEaten(boardIdx, foodName = '') {
@@ -3655,6 +4437,59 @@ function buildRandomOpponentPetsForTurn(turn, teamSize) {
   };
 }
 
+function chooseToyForPackTurn(packId, turn) {
+  const packLabel = getToyPackLabelById(packId);
+  if (!packLabel) return null;
+  const pool = TOY_DEFINITIONS.filter((toy) => normalizeName(toy.pack) === normalizeName(packLabel))
+    .filter((toy) => isToyAvailableOnTurn(toy, turn));
+  if (!pool.length) return null;
+  return randFrom(pool) || null;
+}
+
+function getValidTeamToyForBattle(side, packId, turn) {
+  const current = getActiveTeamToy(side);
+  if (
+    current
+    && normalizeName(current.source_pack) === normalizeName(getToyPackLabelById(packId))
+    && isToyValidForPackAndTurn(current.toy_id, packId, turn)
+  ) {
+    current.activation_state = 'active';
+    return current;
+  }
+  if (side === 'opponent') {
+    state.teamToys.opponent = null;
+  }
+  return null;
+}
+
+function decrementTeamToyDurabilityAtTurnEnd() {
+  const out = [];
+  ['player', 'opponent'].forEach((side) => {
+    const toy = state.teamToys?.[side];
+    if (!toy || Number(toy.remaining_turns || 0) <= 0) return;
+    toy.remaining_turns = Math.max(0, Number(toy.remaining_turns || 0) - 1);
+    if (toy.remaining_turns <= 0) {
+      const breakResult = dispatchToyBreakEvent({
+        source: 'durability_expire',
+        side,
+        toyState: { ...toy },
+        nonce: `${state.turn}-durability`
+      });
+      toy.activation_state = 'broken';
+      out.push({ side, toy_id: toy.toy_id, result: breakResult?.note || '' });
+      state.teamToys[side] = null;
+    } else {
+      toy.activation_state = 'active';
+    }
+  });
+  syncLegacyPlayerToyFields();
+  if (out.length) {
+    state.pendingToyBreakFx = [...(state.pendingToyBreakFx || []), ...out];
+    playUiSound('toybreak', 0.85);
+  }
+  return out;
+}
+
 function countBattlePhases(logs) {
   const out = {
     beforeBattle: 0,
@@ -3681,7 +4516,14 @@ function simulateBattleOnce() {
   const opponentTeamSize = Math.max(1, playerTeamNames.length || 1);
   const opponent = buildRandomOpponentPetsForTurn(state.turn, opponentTeamSize);
   const opponentPackName = CALCULATOR_PACK_BY_APP_ID[opponent.opponentPackId] || 'Turtle';
-  const toyCfg = parseToyConfigFromUi();
+  const playerToyState = getValidTeamToyForBattle('player', state.currentPackId, state.turn);
+  const opponentToyState = getValidTeamToyForBattle('opponent', opponent.opponentPackId, state.turn);
+  const toyCfg = {
+    playerToy: playerToyState?.toy_id || null,
+    playerToyLevel: playerToyState?.toy_level || 1,
+    opponentToy: opponentToyState?.toy_id || null,
+    opponentToyLevel: opponentToyState?.toy_level || 1
+  };
   const simulation = state.calculatorSim.runHeadlessSimulation({
     turn: state.turn,
     simulationCount: 1,
@@ -3689,8 +4531,12 @@ function simulateBattleOnce() {
     maxLoggedBattles: 1,
     playerPack: playerPackName,
     opponentPack: opponentPackName,
+    playerRollAmount: Math.max(0, Number(state.rollsThisTurn || 0)),
+    opponentRollAmount: 0,
     playerToy: toyCfg.playerToy,
     playerToyLevel: toyCfg.playerToyLevel,
+    opponentToy: toyCfg.opponentToy,
+    opponentToyLevel: toyCfg.opponentToyLevel,
     playerPets,
     opponentPets: opponent.pets
   }, {
@@ -3707,10 +4553,16 @@ function simulateBattleOnce() {
     opponentPackName: opponent.opponentPackName,
     playerTeamNames,
     opponentTeamNames: opponent.pets.filter(Boolean).map((pet) => pet.name),
+    rollCountAtBattleStart: Math.max(0, Number(state.rollsThisTurn || 0)),
     playerInitialPets: playerPets.map((p) => (p ? { ...p } : null)),
     opponentInitialPets: opponent.pets.map((p) => (p ? { ...p } : null)),
+    opponentPackId: opponent.opponentPackId,
     playerToy: toyCfg.playerToy,
     playerToyLevel: toyCfg.playerToyLevel,
+    opponentToy: toyCfg.opponentToy,
+    opponentToyLevel: toyCfg.opponentToyLevel,
+    playerToyState: playerToyState ? { ...playerToyState } : null,
+    opponentToyState: opponentToyState ? { ...opponentToyState } : null,
     logs,
     phaseCounts: countBattlePhases(logs)
   };
@@ -3832,6 +4684,54 @@ function parseStockedApple(level) {
   };
 }
 
+function getWormStockFoodDefinitionByName(name, fallbackLevel = 1) {
+  const fallback = parseStockedApple(fallbackLevel);
+  const requestedName = String(name || '').trim();
+  const fallbackName = requestedName || fallback.name;
+  const canonical = getTemplateFoodByName(fallbackName);
+  const canonicalName = fallbackName;
+  const fallbackAbility = canonicalName === 'Best Apple'
+    ? 'Give one pet +3 attack and +3 health.'
+    : canonicalName === 'Better Apple'
+      ? 'Give one pet +2 attack and +2 health.'
+      : 'Give one pet +1 attack and +1 health.';
+  return {
+    name: canonicalName,
+    tier: Number(canonical?.tier || 2),
+    ability: String(canonical?.ability || fallbackAbility),
+    cost: 2,
+    path: resolveTexture(canonicalName) || resolveTexture('Apple')
+  };
+}
+
+function getWormStockPlan(level) {
+  if (level >= 3) {
+    return [
+      { name: 'Best Apple', count: 1 }
+    ];
+  }
+  if (level >= 2) {
+    return [
+      { name: 'Better Apple', count: 1 }
+    ];
+  }
+  return [
+    { name: 'Gold Apple', count: 1 }
+  ];
+}
+
+function getWormStockFoodsForLevel(level) {
+  const plan = getWormStockPlan(level);
+  const out = [];
+  plan.forEach((entry) => {
+    const qty = Math.max(0, Number(entry?.count || 0));
+    for (let i = 0; i < qty; i += 1) {
+      out.push(getWormStockFoodDefinitionByName(entry?.name, level));
+    }
+  });
+  return out;
+}
+
 function getWormStockFoodDefinition(level) {
   const fallback = parseStockedApple(level);
   const canonical = getTemplateFoodByName(fallback.name) || (fallback.fallback ? getTemplateFoodByName(fallback.fallback) : null);
@@ -3852,11 +4752,17 @@ function applyShopStartTurnEffectAt(idx, forcedName = null, forcedLevel = null) 
   const n = normalizeName(forcedName || pet.name);
 
   if (n === 'worm') {
-    const apple = getWormStockFoodDefinition(level);
-    for (let i = 0; i < 2; i += 1) {
-      stockFoodInShop({ ...apple });
-    }
-    logs.push(`${pet.name}: stocked 2 ${apple.name}`);
+    const stockedFoods = getWormStockFoodsForLevel(level);
+    stockedFoods.forEach((food) => stockFoodInShop({ ...food }));
+    const summary = stockedFoods.reduce((acc, food) => {
+      const key = String(food?.name || 'Apple');
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const summaryText = Object.entries(summary)
+      .map(([name, count]) => `${count} ${name}`)
+      .join(', ');
+    logs.push(`${pet.name}: stocked ${summaryText || 'no apples'}`);
     return logs;
   }
 
@@ -3870,6 +4776,42 @@ function applyShopStartTurnEffectAt(idx, forcedName = null, forcedLevel = null) 
     state.shopFoods.forEach(applyDiscount);
     state.extraShopFoods.forEach(applyDiscount);
     logs.push(`${pet.name}: discounted shop food by ${level}`);
+    return logs;
+  }
+
+  if (n === 'dromedary') {
+    const valid = state.shopPets
+      .map((slot, slotIdx) => ({ slot, slotIdx }))
+      .filter((entry) => Boolean(entry.slot?.item))
+      .slice(0, 2);
+    valid.forEach(({ slot }) => {
+      slot.item.baseAttack = Math.max(1, Number(slot.item.baseAttack || 1) + level);
+      slot.item.baseHealth = Math.max(1, Number(slot.item.baseHealth || 1) + level);
+    });
+    if (valid.length) {
+      logs.push(`${pet.name}: buffed ${valid.length} left-most shop pet(s) +${level}/+${level}`);
+    }
+    return logs;
+  }
+
+  if (n === 'goldfish') {
+    const current = Math.max(1, Number(pet.sellValue || 1));
+    const nextSell = current + level;
+    pet.sellValue = nextSell;
+    logs.push(`${pet.name}: sell value +${level} (now ${nextSell})`);
+    return logs;
+  }
+
+  if (n === 'caterpillar') {
+    const prevExp = getExpFromPet(pet);
+    const nextExp = Math.max(0, Math.min(5, prevExp + 1));
+    if (nextExp > prevExp) {
+      const prevLevelInt = getPetLevelInt(pet);
+      hydrateLevelFields(pet, nextExp);
+      const newLevelInt = getPetLevelInt(pet);
+      maybeQueueTierUpReward(prevLevelInt, newLevelInt, idx);
+      logs.push(`${pet.name}: gained +1 experience`);
+    }
     return logs;
   }
 
@@ -3952,6 +4894,64 @@ function executeStartOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
     return logs;
   }
 
+  if (n === 'dromedary' || n === 'goldfish' || n === 'caterpillar') {
+    logs.push(...applyShopStartTurnEffectAt(idx, forcedName, forcedLevel));
+    return logs;
+  }
+
+  if (n === 'owl') {
+    const mouseTemplate = getTemplatePetByName('Mouse');
+    if (mouseTemplate) {
+      const summoned = createBoardPetFromShopPet({ ...mouseTemplate });
+      hydrateLevelFields(summoned, calcExpForLevel(level));
+      placeSummonedPet(summoned);
+      logs.push(`${pet.name}: summoned level ${level} Mouse`);
+    }
+    return logs;
+  }
+
+  if (n === 'tropicalfish') {
+    const neighbors = [];
+    if (idx - 1 >= 0 && state.board[idx - 1]) neighbors.push(idx - 1);
+    if (idx + 1 < BOARD_SIZE && state.board[idx + 1]) neighbors.push(idx + 1);
+    neighbors.forEach((targetIdx) => buffPetAt(targetIdx, 0, level, { fromIdx: idx }));
+    if (neighbors.length) logs.push(`${pet.name}: gave adjacent friends +${level} health`);
+    return logs;
+  }
+
+  if (
+    n === 'ferret'
+    || n === 'lemur'
+    || n === 'gharial'
+    || n === 'puppy'
+    || n === 'stingray'
+    || n === 'mongoose'
+  ) {
+    const chosenToy = maybeChooseToyFromPetAbility(pet, level, {
+      trigger: 'start',
+      interactive: true,
+      triggerLabel: 'start of turn'
+    });
+    if (chosenToy) logs.push(`${pet.name}: chose ${chosenToy.name} (L${state.playerToyLevel})`);
+    return logs;
+  }
+
+  if (n === 'chicken') {
+    state.cannedShopPetAtkBuff += level;
+    state.cannedShopPetHpBuff += level;
+    logs.push(`${pet.name}: future shop pets gain +${level}/+${level}`);
+    return logs;
+  }
+
+  if (n === 'tyrannosaurus') {
+    const eligible = getBoardPetIndices(idx).filter((targetIdx) => Number(state.board[targetIdx]?.tier || 1) >= 5);
+    const picks = randomIndices(eligible, 2);
+    const amount = 2 * level;
+    picks.forEach((targetIdx) => buffPetAt(targetIdx, amount, amount, { fromIdx: idx }));
+    if (picks.length) logs.push(`${pet.name}: buffed ${picks.length} tier 5+ friend(s) +${amount}/+${amount}`);
+    return logs;
+  }
+
   const chosenToy = maybeChooseToyFromPetAbility(pet, level, {
     trigger: 'start',
     interactive: true,
@@ -3981,6 +4981,40 @@ function executeEndOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
     return logs;
   }
 
+  if (n === 'bluebird') {
+    const picks = randomIndices(getBoardPetIndices(idx), 1);
+    picks.forEach((targetIdx) => buffPetAt(targetIdx, level, 0, { fromIdx: idx }));
+    if (picks.length) logs.push(`${pet.name}: gave one random friend +${level} attack`);
+    return logs;
+  }
+
+  if (n === 'hatchingchick') {
+    const ahead = getNearestAheadIndices(idx, 1);
+    const amount = 3 * level;
+    ahead.forEach((targetIdx) => applyTemporaryBuffAt(targetIdx, amount, amount, state.turn + 1, { fromIdx: idx }));
+    if (ahead.length) logs.push(`${pet.name}: gave nearest friend ahead +${amount}/+${amount} until next turn`);
+    return logs;
+  }
+
+  if (n === 'llama') {
+    const hasEmpty = state.board.some((slotPet) => !slotPet);
+    if (!hasEmpty) return logs;
+    buffPetAt(idx, level, 2 * level, { fromIdx: idx });
+    logs.push(`${pet.name}: gained +${level}/+${2 * level} (empty space)`);
+    return logs;
+  }
+
+  if (n === 'chameleon') {
+    const activeToy = getActiveTeamToy('player');
+    if (activeToy) {
+      pet.copiedToyId = String(activeToy.toy_id || '');
+      pet.copiedToyLevel = Math.max(1, Math.min(level, Number(activeToy.toy_level || 1)));
+      pet.copiedToyExpiresTurn = state.turn + 1;
+      logs.push(`${pet.name}: copied ${pet.copiedToyId} toy ability until next turn`);
+    }
+    return logs;
+  }
+
   if (n === 'bison') {
     const hasLevel3Friend = getBoardPetIndices(idx).some((targetIdx) => getPetLevelInt(state.board[targetIdx]) >= 3);
     if (!hasLevel3Friend) return logs;
@@ -4006,11 +5040,12 @@ function executeEndOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
   }
 
   if (n === 'magpie') {
-    const spend = Math.max(0, Math.min(level, Number(state.gold || 0)));
+    const spendCap = getMagpieStoredGoldCap(level);
+    const spend = Math.max(0, Math.min(spendCap, Number(state.gold || 0)));
     if (spend > 0) {
       state.gold = Math.max(0, Number(state.gold || 0) - spend);
       queueNextTurnGold(spend);
-      logs.push(`${pet.name}: spent ${spend} gold and queued ${spend} for next turn`);
+      logs.push(`${pet.name}: spent ${spend} gold and queued ${spend} for next turn (cap ${spendCap})`);
     }
     return logs;
   }
@@ -4031,6 +5066,22 @@ function applyManualStartTurnPerk(idx) {
   } else if (perkKey === 'sardiniancurrant') {
     state.gold += 2;
     logs.push(`${pet.name} (${getPetPerkName(pet)}): +2 gold`);
+  } else if (perkKey === 'sausage') {
+    state.freeRolls = Math.max(0, Number(state.freeRolls || 0)) + 1;
+    logs.push(`${pet.name} (${getPetPerkName(pet)}): +1 free roll`);
+  }
+  return logs;
+}
+
+function applyBridgeStartTurnPerkFallback(idx) {
+  const pet = state.board[idx];
+  if (!pet) return [];
+  const logs = [];
+  const perkName = getPetPerkName(pet);
+  const perkKey = normalizePerkNameKey(perkName);
+  if (perkKey === 'sausage') {
+    state.freeRolls = Math.max(0, Number(state.freeRolls || 0)) + 1;
+    logs.push(`${pet.name} (${perkName}): +1 free roll`);
   }
   return logs;
 }
@@ -4059,9 +5110,32 @@ function applyManualEndTurnPerk(idx) {
   return logs;
 }
 
+function resetTurnTriggerLimits() {
+  for (let i = 0; i < BOARD_SIZE; i += 1) {
+    const pet = state.board[i];
+    if (!pet) continue;
+    pet.triggersConsumed = 0;
+  }
+}
+
 function runStartOfTurnPhase() {
   state.phase = 'start';
   state.foodDiscount = 0;
+  // Strict safety: always clear expired "until next turn" effects at turn start.
+  clearExpiredTemporaryEffects();
+  resetTurnTriggerLimits();
+  if (!doesPackSupportToys(state.currentPackId)) {
+    state.teamToys.player = null;
+    state.playerToyExplicitlySelected = false;
+    syncLegacyPlayerToyFields();
+  } else {
+    const playerToy = getActiveTeamToy('player');
+    if (playerToy && !isToyValidForPackAndTurn(playerToy.toy_id, state.currentPackId, state.turn)) {
+      state.teamToys.player = null;
+      state.playerToyExplicitlySelected = false;
+      syncLegacyPlayerToyFields();
+    }
+  }
   if (useCalculatorShopBridge()) {
     const preBridgeStartGold = Math.max(0, Number(state.gold || 0));
     const expectedSwanGold = state.board.reduce((sum, pet) => {
@@ -4087,6 +5161,7 @@ function runStartOfTurnPhase() {
     for (let i = 0; i < BOARD_SIZE; i += 1) {
       if (!state.board[i]) continue;
       localShopLogs.push(...applyShopStartTurnEffectAt(i));
+      localShopLogs.push(...applyBridgeStartTurnPerkFallback(i));
     }
     logs.push(...localShopLogs);
     state.phase = 'during';
@@ -4114,6 +5189,10 @@ function runEndOfTurnPhase() {
   state.phase = 'end';
   if (useCalculatorShopBridge()) {
     const logs = triggerCalculatorEndTurn();
+    const queued = applyBridgeEndTurnGoldEffects(logs);
+    if (queued > 0) {
+      logs.push(`Bridge gold reconcile: queued +${queued} next-turn gold.`);
+    }
     state.phase = 'during';
     return logs;
   }
@@ -4138,6 +5217,47 @@ function runEndOfTurnPhase() {
   return logs;
 }
 
+function findBoardPetIndexByName(name = '') {
+  const key = normalizeName(name);
+  if (!key) return -1;
+  for (let i = 0; i < BOARD_SIZE; i += 1) {
+    const pet = state.board[i];
+    if (!pet) continue;
+    if (normalizeName(pet.name) === key) return i;
+  }
+  return -1;
+}
+
+function parseAbilitySourceNameFromLog(text = '') {
+  const raw = String(text || '').trim();
+  if (!raw) return '';
+  const m = raw.match(/^([^:]+):/);
+  if (!m) return '';
+  const source = String(m[1] || '').replace(/\s*\(.*?\)\s*$/, '').trim();
+  return source;
+}
+
+async function playShopAbilityLogSequence(logs, phaseLabel = 'Abilities') {
+  const messages = (Array.isArray(logs) ? logs : [])
+    .map((entry) => stripHtmlToText(entry?.message || entry || '').trim())
+    .filter(Boolean);
+  for (const msg of messages) {
+    setStatus(`${phaseLabel}: ${msg}`);
+    const sourceName = parseAbilitySourceNameFromLog(msg);
+    if (sourceName) {
+      const idx = findBoardPetIndexByName(sourceName);
+      if (idx >= 0) {
+        pulseShopAbilityAt(idx, phaseLabel);
+      }
+    }
+    renderBoard();
+    renderShopPets();
+    renderShopFoods();
+    updateHud();
+    await waitMs(TURN_ABILITY_STEP_MS);
+  }
+}
+
 function triggerFriendSummonedAbilities(summonedIdx) {
   if (useCalculatorShopBridge()) {
     triggerCalculatorSummon(summonedIdx);
@@ -4154,6 +5274,9 @@ function triggerFriendSummonedAbilities(summonedIdx) {
     const n = normalizeName(pet.name);
     if (n === 'horse') {
       applyTemporaryBuffAt(summonedIdx, lvl, 0, state.turn + 1, { fromIdx: idx });
+    } else if (n === 'pheasant') {
+      // Pheasant's summon bonus is temporary for the current turn window.
+      applyTemporaryBuffAt(summonedIdx, lvl, lvl, state.turn + 1, { fromIdx: idx, perkText: 'STRAWBERRY TEMP' });
     } else if (n === 'dog') {
       buffPetAt(idx, lvl, lvl, { fromIdx: summonedIdx });
     } else if (n === 'turkey') {
@@ -4166,6 +5289,9 @@ function triggerBuyAbility(pet, boardIdx) {
   if (!pet) return;
   const n = normalizeName(pet.name);
   const lvl = getPetLevelInt(pet);
+  if (Number.isInteger(boardIdx) && boardIdx >= 0 && boardIdx < BOARD_SIZE) {
+    pulseShopAbilityAt(boardIdx, 'Buy');
+  }
   if (useCalculatorShopBridge()) {
     triggerCalculatorBuy(boardIdx);
     if (n === 'cow') {
@@ -4192,6 +5318,28 @@ function triggerBuyAbility(pet, boardIdx) {
     replaceAllShopFoodsWithMilk();
   }
 
+  if (n === 'anglerfish') {
+    const copies = Math.max(1, lvl);
+    const oppPets = Array.isArray(state.battleReport?.opponentInitialPets)
+      ? state.battleReport.opponentInitialPets.filter(Boolean)
+      : [];
+    if (oppPets.length > 0) {
+      for (let i = 0; i < copies; i += 1) {
+        const pick = randFrom(oppPets);
+        if (!pick?.name) continue;
+        const template = getTemplatePetAcrossPacksByName(pick.name) || getTemplatePetByName(pick.name);
+        if (!template) continue;
+        const stocked = {
+          ...template,
+          cost: 0,
+          path: resolvePetTexture(template.name) || template.path || null
+        };
+        placeTierUpPetIntoShop(stocked, false);
+      }
+      setStatus(`${pet.name}: stocked ${copies} free pet copy(ies) from last opponent.`);
+    }
+  }
+
   maybeChooseToyFromPetAbility(pet, lvl, {
     trigger: 'buy',
     interactive: true,
@@ -4215,9 +5363,28 @@ function triggerSellAbility(pet, sourceIdx = -1) {
     }
   };
   const lvl = getPetLevelInt(pet);
+  if (Number.isInteger(sourceIdx) && sourceIdx >= 0 && sourceIdx < BOARD_SIZE) {
+    pulseShopAbilityAt(sourceIdx, 'Sell');
+  }
+  const petKey = normalizeName(pet?.name || '');
   const abilityText = getPetAbilityText(pet, lvl);
   const immediateSellGold = getImmediateGoldForTrigger(pet?.name || '', lvl, 'sell');
+  const queuedNextTurnSellGold = petKey === 'lemming'
+    ? getLemmingNextTurnGold(lvl)
+    : getNextTurnGoldForTrigger(pet?.name || '', lvl, 'sell');
   const chipmunkCopyCount = parseStockCopyCountFromAbility(abilityText, lvl);
+  const stockSleepingPills = (copies) => {
+    const qty = Math.max(1, Number(copies || 1));
+    const pill = getTemplateFoodByName('Sleeping Pill');
+    for (let i = 0; i < qty; i += 1) {
+      stockFoodInShop({
+        name: String(pill?.name || 'Sleeping Pill'),
+        tier: Number(pill?.tier || 1),
+        ability: String(pill?.ability || 'Make one pet faint.'),
+        cost: 0
+      });
+    }
+  };
   const applyDuckShopHealthBuff = () => {
     state.shopPets.forEach((slot) => {
       if (slot.item) slot.item.baseHealth = Math.max(1, (slot.item.baseHealth || 1) + lvl);
@@ -4247,6 +5414,9 @@ function triggerSellAbility(pet, sourceIdx = -1) {
   if (useCalculatorShopBridge()) {
     const preSellGold = Math.max(0, Number(state.gold || 0));
     triggerCalculatorSell(sourceIdx);
+    // Keep hardcoded post-sell reconciliation active even in strict mode.
+    // Bridge sell sync updates board/counters, but shop-side effects (like Duck buffing shop pets)
+    // must still be applied to local shop state.
     if (normalizeName(pet?.name) === 'chipmunk') {
       stockPerkCopies(chipmunkCopyCount);
     }
@@ -4256,10 +5426,14 @@ function triggerSellAbility(pet, sourceIdx = -1) {
     if (normalizeName(pet?.name) === 'pigeon') {
       stockPigeonFood();
     }
+    if (normalizeName(pet?.name) === 'pillbug') {
+      const pills = parseCountWord((abilityText.match(/Stock\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+free\s+Sleeping\s+Pills?/i) || [])[1]) || lvl;
+      stockSleepingPills(pills);
+    }
     if (immediateSellGold > 0 && Number(state.gold || 0) < (preSellGold + immediateSellGold)) {
       state.gold = preSellGold + immediateSellGold;
     }
-    queueNextTurnGold(getNextTurnGoldForTrigger(pet?.name || '', lvl, 'sell'));
+    queueNextTurnGold(queuedNextTurnSellGold);
     return;
   }
   const n = normalizeName(pet.name);
@@ -4273,13 +5447,16 @@ function triggerSellAbility(pet, sourceIdx = -1) {
     stockPigeonFood();
   } else if (n === 'chipmunk') {
     stockPerkCopies(chipmunkCopyCount);
+  } else if (n === 'pillbug') {
+    const pills = parseCountWord((abilityText.match(/Stock\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+free\s+Sleeping\s+Pills?/i) || [])[1]) || lvl;
+    stockSleepingPills(pills);
   } else if (n === 'chinchilla') {
     placeSummonedPet(makeTokenPet('Loyal Chinchilla', 2 * lvl, 2 * lvl, 1));
   }
   if (immediateSellGold > 0) {
     state.gold += immediateSellGold;
   }
-  queueNextTurnGold(getNextTurnGoldForTrigger(pet?.name || '', lvl, 'sell'));
+  queueNextTurnGold(queuedNextTurnSellGold);
 
   maybeChooseToyFromPetAbility(pet, lvl, {
     trigger: 'sell',
@@ -4291,9 +5468,52 @@ function triggerSellAbility(pet, sourceIdx = -1) {
 function triggerFaintAbility(pet, soldIdx) {
   const lvl = pet.levelInt ?? 1;
   const n = normalizeName(pet.name);
+  if (Number.isInteger(soldIdx) && soldIdx >= 0 && soldIdx < BOARD_SIZE) {
+    pulseShopAbilityAt(soldIdx, 'Faint');
+  }
+  const nearestBehind = (count = 1) => {
+    const out = [];
+    for (let i = soldIdx + 1; i < BOARD_SIZE; i += 1) {
+      if (state.board[i]) out.push(i);
+      if (out.length >= count) break;
+    }
+    return out;
+  };
+  const breakFriendlyToyUpToTier = (maxTier) => {
+    const toy = getActiveTeamToy('player');
+    if (!toy) return false;
+    const meta = getToyMetaByName(toy.toy_id);
+    const toyTier = meta ? getToyUnlockTier(meta) : 1;
+    if (toyTier > maxTier) return false;
+    dispatchToyBreakEvent({
+      source: 'mandrill_faint',
+      side: 'player',
+      toyState: { ...toy },
+      petName: pet.name,
+      petLevel: lvl
+    });
+    toy.remaining_turns = 0;
+    toy.activation_state = 'broken';
+    state.teamToys.player = null;
+    syncLegacyPlayerToyFields();
+    return true;
+  };
   if (n === 'ant') {
     const picks = randomIndices(getBoardPetIndices(), 1);
     if (picks.length) buffPetAt(picks[0], lvl, lvl, { fromIdx: soldIdx });
+  } else if (n === 'belugasturgeon') {
+    for (let i = 0; i < lvl; i += 1) {
+      const dolphinTemplate = getTemplatePetAcrossPacksByName('Dolphin') || getTemplatePetByName('Dolphin');
+      const dolphin = dolphinTemplate
+        ? createBoardPetFromShopPet({ ...dolphinTemplate })
+        : makeTokenPet('Dolphin', 2, 3, 2);
+      dolphin.baseAttack = 2;
+      dolphin.baseHealth = 3;
+      hydrateLevelFields(dolphin, 0);
+      placeSummonedPet(dolphin);
+    }
+    const spawned = getBoardPetIndices().filter((idx) => normalizeName(state.board[idx]?.name || '') === 'dolphin');
+    spawned.slice(-lvl).forEach((idx) => setPetPerk(idx, 'Rice'));
   } else if (n === 'cricket') {
     placeSummonedPet(makeTokenPet('Zombie Cricket', lvl, lvl, 1));
   } else if (n === 'flamingo') {
@@ -4326,6 +5546,54 @@ function triggerFaintAbility(pet, soldIdx) {
     }
   } else if (n === 'deer') {
     placeSummonedPet(makeTokenPet('Bus', 5 * lvl, 5 * lvl, 1));
+  } else if (n === 'mandrill') {
+    const maxToyTier = Math.max(2, 2 * lvl);
+    breakFriendlyToyUpToTier(maxToyTier);
+  } else if (n === 'pangolin') {
+    if (getActiveTeamToy('player')) {
+      const behind = nearestBehind(1);
+      behind.forEach((idx) => buffPetAt(idx, 0, 4 * lvl, { fromIdx: soldIdx }));
+    }
+  } else if (n === 'tahr') {
+    nearestBehind(Math.max(1, lvl)).forEach((idx) => setPetPerk(idx, 'Mild Chili'));
+  } else if (n === 'snappingturtle') {
+    nearestBehind(Math.max(1, lvl)).forEach((idx) => setPetPerk(idx, 'Skewer'));
+  } else if (n === 'microbe') {
+    const reach = 3 * lvl;
+    for (let i = 0; i < BOARD_SIZE; i += 1) {
+      if (!state.board[i]) continue;
+      if (Math.abs(i - soldIdx) <= reach) {
+        setPetAilment(i, 'Weak');
+      }
+    }
+  } else if (n === 'mole') {
+    const candidates = getBoardPetIndices()
+      .filter((idx) => getPetPerkName(state.board[idx]))
+      .sort((a, b) => Math.abs(a - soldIdx) - Math.abs(b - soldIdx));
+    candidates.slice(0, 2).forEach((idx) => {
+      clearPetEquipment(idx, 'mole_faint');
+    });
+    placeSummonedPet(makeTokenPet('Mole', 6 * lvl, 6 * lvl, 3));
+  } else if (n === 'eagle') {
+    const sourceTier = Number(pet.tier || 5);
+    const summonTier = Math.max(1, Math.min(6, sourceTier + 1));
+    const pack = state.packs[String(state.currentPackId)] || {};
+    const pool = (pack.pets || state.currentPool.pets || []).filter((x) => Number(x.tier || 1) === summonTier);
+    const pick = randFrom(pool);
+    if (pick) {
+      const s = createBoardPetFromShopPet({ ...pick });
+      const power = 5 * lvl;
+      s.baseAttack = power;
+      s.baseHealth = power;
+      hydrateLevelFields(s, calcExpForLevel(lvl));
+      placeSummonedPet(s);
+    }
+  } else if (n === 'hoopoebird') {
+    // Battle-facing effect handled by authoritative battle engine.
+  } else if (n === 'stonefish') {
+    // Battle-facing effect handled by authoritative battle engine.
+  } else if (n === 'lionfish') {
+    // Battle-facing effect handled by authoritative battle engine.
   } else if (n === 'rooster') {
     const atk = Math.max(1, Math.ceil((pet.baseAttack || 1) * 0.5 * lvl));
     placeSummonedPet(makeTokenPet('Chick', atk, 1, 1));
@@ -4347,8 +5615,9 @@ function getManualPerkSellBonus(pet) {
 }
 
 function getSellGoldForPet(pet) {
+  const explicitSellValue = Math.max(0, Number(pet?.sellValue || 0));
   const lvl = Math.max(1, Math.min(3, Number(getPetLevelInt(pet) || 1)));
-  return Math.max(SELL_VALUE, lvl);
+  return Math.max(SELL_VALUE, lvl, explicitSellValue);
 }
 
 function sellPetAtIndex(idx) {
@@ -4436,7 +5705,7 @@ function resetSelection() {
   state.boardSelectedIndex = null;
 }
 
-function maybeQueueTierUpReward(previousLevelInt, newLevelInt) {
+function maybeQueueTierUpReward(previousLevelInt, newLevelInt, leveledPetIdx = -1) {
   if (newLevelInt <= previousLevelInt) return 0;
 
   const rewardTier = Math.min(6, maxTierForTurn(state.turn) + 1);
@@ -4456,14 +5725,26 @@ function maybeQueueTierUpReward(previousLevelInt, newLevelInt) {
     return 0;
   }
 
-  const buildDistinctOptions = () => {
+  const getWyvernExtraTierUpOptions = () => {
+    let extra = 0;
+    for (let i = 0; i < BOARD_SIZE; i += 1) {
+      const pet = state.board[i];
+      if (!pet) continue;
+      if (normalizeName(pet.name) !== 'wyvern') continue;
+      if (i === leveledPetIdx) continue;
+      extra += Math.max(0, getPetLevelInt(pet));
+    }
+    return Math.max(0, extra);
+  };
+
+  const buildDistinctOptions = (count = 2) => {
     const byName = new Map();
     rewardPool.forEach((candidate) => {
       const key = normalizeName(candidate?.name || '');
       if (!key || byName.has(key)) return;
       byName.set(key, candidate);
     });
-    const picks = pickN(Array.from(byName.values()), 2);
+    const picks = pickN(Array.from(byName.values()), Math.max(1, Number(count || 2)));
     return picks.map((base) => ({
       item: {
         ...base,
@@ -4476,9 +5757,11 @@ function maybeQueueTierUpReward(previousLevelInt, newLevelInt) {
 
   let queuedCount = 0;
   const count = newLevelInt - previousLevelInt;
+  const extraChoices = getWyvernExtraTierUpOptions();
+  const optionCount = 2 + extraChoices;
   for (let i = 0; i < count; i += 1) {
     playUiSound('levelup', 0.9);
-    const options = buildDistinctOptions();
+    const options = buildDistinctOptions(optionCount);
     if (!options.length) continue;
     state.pendingTierUpQueue.push({
       rewardTier,
@@ -4524,7 +5807,7 @@ function combineBoardPets(sourceIdx, targetIdx) {
   renderBoard();
 
   setStatus(`${merged.name} stacked to level ${merged.levelValue}.`);
-  maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt);
+  maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt, targetIdx);
   applyLuckyCatLevelUpNextTurnGold(merged, bumped.prevLevelInt, bumped.newLevelInt);
   if (bumped.newLevelInt > bumped.prevLevelInt) {
     animateLevelUpAt('shop', targetIdx);
@@ -4637,7 +5920,7 @@ function tryBuyShopPetToBoard(shopIdx, boardIdx) {
   renderShopFoods();
   playPetBuySound(shopPet.name);
   setStatus(`Bought and stacked ${shopPet.name} to level ${merged.levelValue}.`);
-  maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt);
+  maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt, boardIdx);
   applyLuckyCatLevelUpNextTurnGold(merged, bumped.prevLevelInt, bumped.newLevelInt);
   if (bumped.newLevelInt > bumped.prevLevelInt) {
     animateLevelUpAt('shop', boardIdx);
@@ -4678,7 +5961,8 @@ function tryFeedFoodToBoard(listName, foodIdx, boardIdx) {
   }
 
   state.gold -= cost;
-  if (useCalculatorShopBridge()) {
+  const bridgeMode = useCalculatorShopBridge();
+  if (bridgeMode) {
     triggerCalculatorSpendGold(cost);
   }
   const manaGainMatch = String(food?.ability || '').match(/Give one pet \+(\d+) mana/i);
@@ -4686,6 +5970,48 @@ function tryFeedFoodToBoard(listName, foodIdx, boardIdx) {
   const preMana = Number.isInteger(resolvedBoardIdx) && resolvedBoardIdx >= 0
     ? Math.max(0, Number(state.board[resolvedBoardIdx]?.mana || 0))
     : 0;
+
+  if (bridgeMode) {
+    if (!Number.isInteger(resolvedBoardIdx) || resolvedBoardIdx < 0 || resolvedBoardIdx >= BOARD_SIZE || !state.board[resolvedBoardIdx]) {
+      state.gold += cost;
+      setStatus(`Cannot use ${food.name}: no valid target pet.`);
+      return;
+    }
+    removeFoodFromSlot(foodRef);
+    triggerCalculatorFoodEaten(resolvedBoardIdx, food.name);
+    const livePet = state.board[resolvedBoardIdx];
+    if (livePet) {
+      const perkFromFood = getCanonicalPerkName(parsePerkFromText(String(food?.ability || '')));
+      if (perkFromFood) {
+        livePet.equipment = perkFromFood;
+        if (normalizeName(livePet.name) === 'whaleshark') {
+          resolveWhaleSharkTriggerAt(resolvedBoardIdx, 'perk gained');
+        } else {
+          pulseShopAbilityAt(resolvedBoardIdx, perkFromFood);
+        }
+      } else {
+        const ailmentFromFood = getCanonicalAilmentName(inferAilmentFromText(String(food?.ability || '')));
+        if (ailmentFromFood) {
+          livePet.equipment = ailmentFromFood;
+          if (normalizeName(livePet.name) === 'whaleshark') {
+            resolveWhaleSharkTriggerAt(resolvedBoardIdx, 'ailment gained');
+          } else {
+            pulseShopAbilityAt(resolvedBoardIdx, ailmentFromFood);
+          }
+        }
+      }
+    }
+    if (manaGain > 0 && state.board[resolvedBoardIdx]) {
+      const expected = preMana + manaGain;
+      state.board[resolvedBoardIdx].mana = Math.max(expected, Number(state.board[resolvedBoardIdx].mana || 0));
+    }
+    updateHud();
+    renderBoard();
+    renderShopFoods();
+    renderShopPets();
+    setStatus(`Used ${food.name}${state.board[resolvedBoardIdx]?.name ? ` on ${state.board[resolvedBoardIdx].name}` : ''} (authoritative).`);
+    return;
+  }
   const applied = applyFoodToBoardPet(food, resolvedBoardIdx, foodRef);
   if (!applied.ok) {
     state.gold += cost;
@@ -4694,13 +6020,6 @@ function tryFeedFoodToBoard(listName, foodIdx, boardIdx) {
   }
 
   removeFoodFromSlot(foodRef);
-  if (useCalculatorShopBridge() && Number.isInteger(resolvedBoardIdx) && resolvedBoardIdx >= 0) {
-    triggerCalculatorFoodEaten(resolvedBoardIdx, food.name);
-    if (manaGain > 0 && state.board[resolvedBoardIdx]) {
-      const expected = preMana + manaGain;
-      state.board[resolvedBoardIdx].mana = Math.max(expected, Number(state.board[resolvedBoardIdx].mana || 0));
-    }
-  }
   updateHud();
   renderBoard();
   renderShopFoods();
@@ -4787,6 +6106,9 @@ function renderBoard() {
       if (Array.isArray(state.shopAilmentBySlot)) {
         state.shopAilmentBySlot[idx] = '';
       }
+      if (Array.isArray(state.shopManaBySlot)) {
+        state.shopManaBySlot[idx] = 0;
+      }
       const empty = document.createElement('div');
       empty.className = 'name';
       empty.textContent = `Empty (${idx + 1})`;
@@ -4845,7 +6167,28 @@ function renderBoard() {
     actions.appendChild(sellBtn);
     el.appendChild(media);
     if (effectsRow.children.length > 0) el.appendChild(effectsRow);
-    const manaBadge = createManaBadgeElement(Math.max(0, Number(pet.mana || 0)));
+    if (!Array.isArray(state.shopManaBySlot)) {
+      state.shopManaBySlot = Array.from({ length: BOARD_SIZE }, () => 0);
+    }
+    const pulseUntil = Number(state.rollCounterPulseUntilBySlot?.[idx] || 0);
+    const showRollCounter = Number(state.rollsThisTurn || 0) > 0
+      && petHasRollTriggerTag(pet)
+      && Date.now() <= pulseUntil;
+    if (showRollCounter) {
+      const rollCounter = document.createElement('div');
+      rollCounter.className = 'roll-counter-overlay';
+      rollCounter.textContent = String(Math.max(0, Number(state.rollsThisTurn || 0)));
+      rollCounter.classList.add('show', 'pop');
+      el.appendChild(rollCounter);
+    }
+    const mana = Math.max(0, Number(pet.mana || 0));
+    const prevMana = Math.max(0, Number(state.shopManaBySlot[idx] ?? mana));
+    const manaDelta = mana - prevMana;
+    state.shopManaBySlot[idx] = mana;
+    const manaBadge = createManaBadgeElement(mana, {
+      delta: manaDelta,
+      floatingGain: manaDelta > 0 ? manaDelta : 0
+    });
     if (manaBadge) el.appendChild(manaBadge);
     el.appendChild(statsText);
     el.appendChild(levelText);
@@ -5124,7 +6467,7 @@ function renderTierUpInline() {
   }
 
   const { rewardTier, options } = state.pendingTierUp;
-  tierUpText.textContent = `Tier ${rewardTier} reward: pick 1. You can freeze options, then roll.`;
+  tierUpText.textContent = `Tier ${rewardTier} reward: pick 1 for ${TIER_UP_COST} gold. Freeze to keep an option, or roll past to discard.`;
   tierUpChoices.innerHTML = '';
 
   options.forEach((slot, idx) => {
@@ -5167,18 +6510,6 @@ function renderTierUpInline() {
     card.appendChild(freezeBtn);
     tierUpChoices.appendChild(card);
   });
-
-  const controls = document.createElement('div');
-  controls.className = 'tier-up-choice slot';
-  const title = document.createElement('div');
-  title.className = 'name';
-  title.textContent = 'Roll costs 1';
-  const skipBtn = document.createElement('button');
-  skipBtn.textContent = 'Skip';
-  skipBtn.addEventListener('click', skipTierUpReward);
-  controls.appendChild(title);
-  controls.appendChild(skipBtn);
-  tierUpChoices.appendChild(controls);
 
   tierUpInline.classList.remove('hidden');
 }
@@ -5236,6 +6567,10 @@ function rerollPendingTierUpOptions() {
 function chooseTierUpPet(optionIndex) {
   if (!state.pendingTierUp) return;
   playUiSound('click', 0.7);
+  if (state.gold < TIER_UP_COST) {
+    setStatus(`Not enough gold. Tier-up pick costs ${TIER_UP_COST} gold.`);
+    return;
+  }
 
   const pet = state.pendingTierUp.options[optionIndex]?.item || null;
   if (!pet) return;
@@ -5245,25 +6580,30 @@ function chooseTierUpPet(optionIndex) {
     setStatus('Board is full. Sell or reposition to make space for tier-up pet.');
     return;
   }
+  state.gold -= TIER_UP_COST;
+  if (useCalculatorShopBridge()) {
+    triggerCalculatorSpendGold(TIER_UP_COST);
+  }
 
   state.pendingTierUp = state.pendingTierUpQueue.length > 0 ? state.pendingTierUpQueue.shift() : null;
   renderTierUpInline();
   renderBoard();
   renderShopPets();
-  setStatus(`Took ${pet.name} and placed it on your board.`);
+  updateHud();
+  setStatus(`Took ${pet.name} for ${TIER_UP_COST} gold and placed it on your board.`);
 }
 
-function placeTierUpPetIntoShop(pet) {
+function placeTierUpPetIntoShop(pet, frozen = false) {
   const emptyShopSlot = firstEmptyShopPetSlot();
   if (emptyShopSlot >= 0) {
     state.shopPets[emptyShopSlot].item = { ...pet };
-    state.shopPets[emptyShopSlot].frozen = false;
+    state.shopPets[emptyShopSlot].frozen = Boolean(frozen);
     return;
   }
   const replaceIdx = state.shopPets.findIndex((s) => !s.frozen);
   const idx = replaceIdx >= 0 ? replaceIdx : 0;
   state.shopPets[idx].item = { ...pet };
-  state.shopPets[idx].frozen = false;
+  state.shopPets[idx].frozen = Boolean(frozen);
 }
 
 function placeTierUpPetOnBoard(pet) {
@@ -5281,18 +6621,28 @@ function claimFrozenTierUpOptions() {
     .map((slot) => slot.item);
   if (!frozenPets.length) return 0;
 
-  frozenPets.forEach((pet) => placeTierUpPetIntoShop(pet));
+  frozenPets.forEach((pet) => placeTierUpPetIntoShop(pet, true));
   state.pendingTierUp = state.pendingTierUpQueue.length > 0 ? state.pendingTierUpQueue.shift() : null;
   renderTierUpInline();
   renderShopPets();
   return frozenPets.length;
 }
 
-function skipTierUpReward() {
-  playUiSound('click', 0.7);
-  state.pendingTierUp = state.pendingTierUpQueue.length > 0 ? state.pendingTierUpQueue.shift() : null;
+function rollPastTierUpRewards() {
+  if (!state.pendingTierUp) return { movedFrozen: 0, discardedRewards: 0 };
+  const frozenPets = state.pendingTierUp.options
+    .filter((slot) => slot?.frozen && slot?.item)
+    .map((slot) => slot.item);
+  frozenPets.forEach((pet) => placeTierUpPetIntoShop(pet, true));
+  const discardedQueued = Number(state.pendingTierUpQueue?.length || 0);
+  state.pendingTierUp = null;
+  state.pendingTierUpQueue = [];
   renderTierUpInline();
-  setStatus('Skipped tier-up reward.');
+  renderShopPets();
+  return {
+    movedFrozen: frozenPets.length,
+    discardedRewards: 1 + discardedQueued
+  };
 }
 
 function switchPack(packId) {
@@ -5300,17 +6650,29 @@ function switchPack(packId) {
   state.turn = 1;
   state.gold = START_GOLD;
   state.nextTurnBonusGold = 0;
+  state.freeRolls = 0;
+  state.nextTurnFreeRolls = 0;
   state.phase = 'during';
   state.foodDiscount = 0;
   state.cannedShopPetAtkBuff = 0;
   state.cannedShopPetHpBuff = 0;
   state.peachUpgradeBonus = 0;
   state.lastBattleLost = false;
+  if (state.rollCounterHideTimer) {
+    clearTimeout(state.rollCounterHideTimer);
+    state.rollCounterHideTimer = null;
+  }
   state.rollsThisTurn = 0;
+  state.rollCounterPulseUntilBySlot = Array.from({ length: BOARD_SIZE }, () => 0);
   state.level3SoldThisTurn = 0;
   state.summonedThisTurn = 0;
   state.playerToy = null;
   state.playerToyLevel = 1;
+  state.playerToyExplicitlySelected = false;
+  state.teamToys = { player: null, opponent: null };
+  state.pendingToyBreakFx = [];
+  state.toyBreakEventSeen = {};
+  state.battleGeckoToyBreakBindings = [];
   state.toyChoices = [];
   state.toyChoiceContext = null;
   state.lastToySource = null;
@@ -5319,9 +6681,18 @@ function switchPack(packId) {
   state.toyModalFocusIndex = 0;
   state.debugTriggerLog = [];
   state.shopAilmentBySlot = Array.from({ length: BOARD_SIZE }, () => '');
+  state.shopManaBySlot = Array.from({ length: BOARD_SIZE }, () => 0);
   state.battleAilmentBySide = {
     player: Array.from({ length: BOARD_SIZE }, () => ''),
     opponent: Array.from({ length: BOARD_SIZE }, () => '')
+  };
+  state.battleManaBySide = {
+    player: Array.from({ length: BOARD_SIZE }, () => 0),
+    opponent: Array.from({ length: BOARD_SIZE }, () => 0)
+  };
+  state.battleManaRenderBySide = {
+    player: Array.from({ length: BOARD_SIZE }, () => 0),
+    opponent: Array.from({ length: BOARD_SIZE }, () => 0)
   };
   state.levelHistoryBySlot = Array.from({ length: BOARD_SIZE }, () => []);
   state.board = Array(BOARD_SIZE).fill(null);
@@ -5330,7 +6701,7 @@ function switchPack(packId) {
   state.pendingTierUpQueue = [];
   state.battleReport = null;
   renderBattleReport();
-  closeToyPickerModal();
+  closeToyPickerModal(true);
   clearTooltip();
   renderTierUpInline();
 
@@ -5388,30 +6759,43 @@ function rollShop() {
     return;
   }
   playUiSound('click', 0.7);
+  const useFreeRoll = () => {
+    const free = Math.max(0, Number(state.freeRolls || 0));
+    if (free > 0) {
+      state.freeRolls = free - 1;
+      return true;
+    }
+    return false;
+  };
   if (state.pendingTierUp) {
-    if (state.gold < ROLL_COST) {
+    const consumedFree = useFreeRoll();
+    if (!consumedFree && state.gold < ROLL_COST) {
       setStatus('Not enough gold to roll.');
       return;
     }
-    state.gold -= ROLL_COST;
+    if (!consumedFree) {
+      state.gold -= ROLL_COST;
+    }
     state.rollsThisTurn += 1;
+    pulseRollCountersOnBoard();
     if (useCalculatorShopBridge()) {
-      triggerCalculatorSpendGold(ROLL_COST);
-      triggerCalculatorRoll();
+      if (!consumedFree) {
+        triggerCalculatorSpendGold(ROLL_COST);
+      }
+      const rollLogs = triggerCalculatorRoll();
+      queueImmediateFreeRollsFromLogs(rollLogs);
     }
     clearExtraShopFoodsOnRoll(true);
-    const claimed = claimFrozenTierUpOptions();
-    if (claimed > 0) {
-      renderShopFoods();
-      animateShopRefresh();
-      updateHud();
-      setStatus(`Claimed ${claimed} frozen tier-up pet${claimed > 1 ? 's' : ''} into the pet shop. Other tier-up options were removed.`);
-      return;
-    }
-    rerollPendingTierUpOptions();
+    const rolledPast = rollPastTierUpRewards();
     renderShopFoods();
     animateShopRefresh();
+    renderBoard();
     updateHud();
+    setStatus(
+      rolledPast.movedFrozen > 0
+        ? `Rolled past tier-up rewards${consumedFree ? ' (free)' : ''}. Moved ${rolledPast.movedFrozen} frozen option${rolledPast.movedFrozen > 1 ? 's' : ''} into the pet shop (frozen). Discarded ${rolledPast.discardedRewards} reward set${rolledPast.discardedRewards > 1 ? 's' : ''}.`
+        : `Rolled past tier-up rewards${consumedFree ? ' (free)' : ''}. Discarded ${rolledPast.discardedRewards} reward set${rolledPast.discardedRewards > 1 ? 's' : ''}.`
+    );
     return;
   }
 
@@ -5420,21 +6804,29 @@ function rollShop() {
     return;
   }
 
-  if (state.gold < ROLL_COST) {
+  const consumedFree = useFreeRoll();
+  if (!consumedFree && state.gold < ROLL_COST) {
     setStatus('Not enough gold to roll.');
     return;
   }
 
-  state.gold -= ROLL_COST;
+  if (!consumedFree) {
+    state.gold -= ROLL_COST;
+  }
   state.rollsThisTurn += 1;
+  pulseRollCountersOnBoard();
   if (useCalculatorShopBridge()) {
-    triggerCalculatorSpendGold(ROLL_COST);
-    triggerCalculatorRoll();
+    if (!consumedFree) {
+      triggerCalculatorSpendGold(ROLL_COST);
+    }
+    const rollLogs = triggerCalculatorRoll();
+    queueImmediateFreeRollsFromLogs(rollLogs);
   }
   clearExtraShopFoodsOnRoll(true);
   refillShop(true);
+  renderBoard();
   updateHud();
-  setStatus('Rolled new pets and food. Frozen slots stayed in place.');
+  setStatus(`Rolled new pets and food${consumedFree ? ' (free)' : ''}. Frozen slots stayed in place.`);
   } finally {
     state.rollActionLocked = false;
     updateRollButtonState();
@@ -5449,13 +6841,19 @@ async function endTurn() {
   playUiSound('click', 0.7);
   if (state.battleInProgress) return;
   if (state.pendingTierUp) {
-    setStatus('Choose or skip your tier-up reward first.');
+    setStatus('Choose your tier-up reward, or roll past it to discard.');
     return;
+  }
+  if (state.rollCounterHideTimer) {
+    clearTimeout(state.rollCounterHideTimer);
+    state.rollCounterHideTimer = null;
   }
 
   state.battleInProgress = true;
   state.phase = 'battle';
   const endLogs = runEndOfTurnPhase();
+  await playShopAbilityLogSequence(endLogs, 'End Turn');
+  const queuedFreeRollsFromEnd = queueNextTurnFreeRollsFromLogs(endLogs, 'end');
   let battleLabel = 'No battle';
   try {
     const activeCount = state.board.filter(Boolean).length;
@@ -5464,6 +6862,10 @@ async function endTurn() {
       const queuedFromBattle = queueBattleNextTurnGoldFromReport(report);
       if (queuedFromBattle > 0) {
         pushDebugTrigger('BattleNextTurnGold', `Queued ${queuedFromBattle} gold from battle next-turn triggers.`);
+      }
+      const queuedFreeRollsFromBattle = queueNextTurnFreeRollsFromLogs(report?.logs || [], 'faint');
+      if (queuedFreeRollsFromBattle > 0) {
+        pushDebugTrigger('BattleNextTurnFreeRolls', `Queued ${queuedFreeRollsFromBattle} free rolls from battle next-turn triggers.`);
       }
       await playBattleScene(report);
       battleLabel = report.winner === 'player' ? 'Win' : report.winner === 'opponent' ? 'Loss' : 'Draw';
@@ -5474,6 +6876,7 @@ async function endTurn() {
         opponentPackName: 'N/A',
         playerTeamNames: [],
         opponentTeamNames: [],
+        rollCountAtBattleStart: Math.max(0, Number(state.rollsThisTurn || 0)),
         logs: [{ message: 'No pets on your board. Battle skipped.' }],
         phaseCounts: { beforeBattle: 0, startBattle: 0, afterStartBattle: 0 }
       };
@@ -5491,24 +6894,39 @@ async function endTurn() {
     state.phase = 'during';
   }
 
+  const brokenToys = decrementTeamToyDurabilityAtTurnEnd();
   state.turn += 1;
+  state.toyBreakEventSeen = {};
+  state.battleGeckoToyBreakBindings = [];
   state.rollsThisTurn = 0;
+  state.rollCounterPulseUntilBySlot = Array.from({ length: BOARD_SIZE }, () => 0);
   state.level3SoldThisTurn = 0;
   state.summonedThisTurn = 0;
   clearExpiredTemporaryEffects();
-  const bonusGold = Number(state.nextTurnBonusGold || 0);
-  state.gold = START_GOLD + bonusGold;
+  const bonusGold = Math.max(0, Number(state.nextTurnBonusGold || 0));
+  state.gold = resolveTurnStartGold();
   state.nextTurnBonusGold = 0;
+  state.pendingTierUp = null;
+  state.pendingTierUpQueue = [];
+  state.extraShopFoods = Array.from({ length: EXTRA_FOOD_SHOP_SIZE }, () => ({ item: null, frozen: false }));
+  state.freeRolls = Math.max(0, Number(state.freeRolls || 0)) + Math.max(0, Number(state.nextTurnFreeRolls || 0));
+  state.nextTurnFreeRolls = 0;
   resetSelection();
   clearTooltip();
   applyTurnTierFilters();
   refillShop(true);
   const startLogs = runStartOfTurnPhase();
+  await playShopAbilityLogSequence(startLogs, `Turn ${state.turn} Start`);
   renderBoard();
   renderShopFoods();
   renderShopPets();
   updateHud();
-  setStatus(`Turn ${state.turn} started. Last battle: ${battleLabel}. Turn flow: end(${endLogs.length}) -> battle -> start(${startLogs.length}). Gold: ${state.gold}. Shop now allows up to Tier ${maxTierForTurn(state.turn)}.`);
+  const brokenLabel = brokenToys.length
+    ? ` Toy broke: ${brokenToys.map((x) => `${x.side === 'player' ? 'You' : 'Opp'} ${x.toy_id}`).join(', ')}.`
+    : '';
+  const freeRollLabel = state.freeRolls > 0 ? ` Free rolls: ${state.freeRolls}.` : '';
+  const queuedEndFreeLabel = queuedFreeRollsFromEnd > 0 ? ` Queued free rolls from end-turn: ${queuedFreeRollsFromEnd}.` : '';
+  setStatus(`Turn ${state.turn} started. Last battle: ${battleLabel}. Turn flow: end(${endLogs.length}) -> battle -> start(${startLogs.length}). Gold: ${state.gold}.${freeRollLabel}${queuedEndFreeLabel} Shop now allows up to Tier ${maxTierForTurn(state.turn)}.${brokenLabel}`);
 }
 
 function applyRandomWallpaper() {
@@ -5528,6 +6946,34 @@ function hydratePackData(packData) {
     if (value && typeof value === 'object') return Object.values(value);
     return [];
   };
+  const mapReferencePackTokenToIds = (tokenRaw) => {
+    const token = String(tokenRaw || '').trim().toLowerCase();
+    if (!token) return [];
+    const direct = token.match(/^pack(\d+)$/i);
+    if (direct) return [Number(direct[1])];
+    const byName = {
+      turtle: 1,
+      puppy: 2,
+      star: 3,
+      golden: 4,
+      unicorn: 5,
+      danger: 6
+    };
+    const mapped = byName[token];
+    return mapped ? [mapped] : [];
+  };
+  const buildAbilityLevelsFromReference = (abilities) => {
+    const rows = Array.isArray(abilities) ? abilities : [];
+    const getByLevel = (lvl) => String(rows.find((a) => Number(a?.Level || 0) === lvl)?.About || '').trim();
+    const l1 = getByLevel(1);
+    const l2 = getByLevel(2) || l1;
+    const l3 = getByLevel(3) || l2 || l1;
+    return {
+      level1: l1,
+      level2: l2,
+      level3: l3
+    };
+  };
 
   Object.keys(packs).forEach((packId) => {
     const pack = packs[packId];
@@ -5537,7 +6983,7 @@ function hydratePackData(packData) {
       name: pack?.name || `Pack ${packId}`,
       pets: pets.map((p) => ({
         ...p,
-        path: resolveTexture(p.name)
+        path: resolvePetTexture(p.name)
       })),
       foods: foods.map((f) => ({
         ...f,
@@ -5547,7 +6993,195 @@ function hydratePackData(packData) {
     };
   });
 
+  // Merge hardcoded local reference data (copied from SAP-Calculator) to fill missing pets/foods.
+  const refPets = Array.isArray(state.referenceData?.pets) ? state.referenceData.pets : [];
+  const refFoods = Array.isArray(state.referenceData?.foods) ? state.referenceData.foods : [];
+  refPets.forEach((pet) => {
+    const name = String(pet?.Name || '').trim();
+    if (!name) return;
+    const packIds = Array.from(new Set((Array.isArray(pet?.Packs) ? pet.Packs : []).flatMap(mapReferencePackTokenToIds)));
+    if (!packIds.length) return;
+    packIds.forEach((packId) => {
+      const bucket = out[String(packId)];
+      if (!bucket || !Array.isArray(bucket.pets)) return;
+      const exists = bucket.pets.some((p) => normalizeName(p?.name || '') === normalizeName(name));
+      if (exists) return;
+      bucket.pets.push({
+        name,
+        tier: Math.max(1, Number(pet?.Tier || 1)),
+        baseAttack: Math.max(1, Number(pet?.Attack || 1)),
+        baseHealth: Math.max(1, Number(pet?.Health || 1)),
+        ability: buildAbilityLevelsFromReference(pet?.Abilities),
+        path: resolvePetTexture(name)
+      });
+    });
+  });
+  refFoods.forEach((food) => {
+    const name = String(food?.Name || '').trim();
+    if (!name) return;
+    const packIds = Array.from(new Set((Array.isArray(food?.Packs) ? food.Packs : []).flatMap(mapReferencePackTokenToIds)));
+    if (!packIds.length) return;
+    packIds.forEach((packId) => {
+      const bucket = out[String(packId)];
+      if (!bucket || !Array.isArray(bucket.foods)) return;
+      const exists = bucket.foods.some((f) => normalizeName(f?.name || '') === normalizeName(name));
+      if (exists) return;
+      bucket.foods.push({
+        name,
+        tier: Math.max(1, Number(food?.Tier || 1)),
+        ability: String(food?.Ability || ''),
+        cost: normalizeName(name) === 'sleepingpill' ? 1 : BUY_COST,
+        path: resolveTexture(name)
+      });
+    });
+  });
+
+  // Pack 2 hard-force: use full reference roster for pets/foods in Puppy pack.
+  const strictPack2 = out['2'];
+  if (strictPack2) {
+    const refPack2Pets = refPets
+      .filter((pet) => (Array.isArray(pet?.Packs) ? pet.Packs : []).some((pk) => mapReferencePackTokenToIds(pk).includes(2)))
+      .map((pet) => ({
+        name: String(pet?.Name || '').trim(),
+        tier: Math.max(1, Number(pet?.Tier || 1)),
+        baseAttack: Math.max(1, Number(pet?.Attack || 1)),
+        baseHealth: Math.max(1, Number(pet?.Health || 1)),
+        ability: buildAbilityLevelsFromReference(pet?.Abilities),
+        path: resolvePetTexture(String(pet?.Name || '').trim())
+      }))
+      .filter((p) => p.name);
+    if (refPack2Pets.length) {
+      strictPack2.pets = refPack2Pets;
+    }
+
+    const refPack2Foods = refFoods
+      .filter((food) => (Array.isArray(food?.Packs) ? food.Packs : []).some((pk) => mapReferencePackTokenToIds(pk).includes(2)))
+      .map((food) => {
+        const name = String(food?.Name || '').trim();
+        return {
+          name,
+          tier: Math.max(1, Number(food?.Tier || 1)),
+          ability: String(food?.Ability || ''),
+          cost: normalizeName(name) === 'sleepingpill' ? 1 : BUY_COST,
+          path: resolveTexture(name)
+        };
+      })
+      .filter((f) => f.name);
+    if (refPack2Foods.length) {
+      strictPack2.foods = refPack2Foods;
+    }
+  }
+
+  // Ensure Pack 5 ("Unicorn") includes ??? when present in authoritative reference.
+  const unicornPack = out['5'];
+  if (unicornPack && Array.isArray(unicornPack.pets)) {
+    const hasQuestionPet = unicornPack.pets.some((p) => normalizeName(p?.name || '') === 'unknown' || String(p?.name || '') === '???');
+    if (!hasQuestionPet) {
+      unicornPack.pets.unshift({
+        name: '???',
+        tier: 1,
+        baseAttack: 3,
+        baseHealth: 2,
+        ability: {
+          level1: 'End turn: Give +1 attack and Spooked until next turn to the nearest friend ahead.',
+          level2: 'End turn: Give +2 attack and Spooked until next turn to the nearest friend ahead.',
+          level3: 'End turn: Give +3 attack and Spooked until next turn to the nearest friend ahead.'
+        },
+        path: resolvePetTexture('Leafling') || resolvePetTexture('???') || null
+      });
+    }
+  }
+
   state.packs = out;
+}
+
+function buildRollAbilityTagIndex() {
+  const tagsByPetKey = {};
+  let fallbackUsed = false;
+  const expForLevel = 0;
+  const packIds = Object.keys(state.packs || {}).map((x) => Number(x)).filter((x) => Number.isFinite(x));
+  const runnerCache = new Map();
+  const canUseMeta = isAuthoritativeMechanicsReady();
+
+  const getRunnerForPack = (packId) => {
+    if (!canUseMeta) return null;
+    const calcPack = CALCULATOR_PACK_BY_APP_ID[packId];
+    if (!calcPack) return null;
+    if (runnerCache.has(packId)) return runnerCache.get(packId);
+    const sim = state.calculatorSim;
+    if (!sim || typeof sim.__createSimulationRunner !== 'function' || typeof sim.LogService !== 'function') return null;
+    const logService = new sim.LogService();
+    if (typeof logService.setEnabled === 'function') logService.setEnabled(false);
+    const runner = sim.__createSimulationRunner(logService);
+    runner.setupGameEnvironment({
+      turn: 7,
+      simulationCount: 1,
+      playerPack: calcPack,
+      opponentPack: calcPack,
+      playerPets: Array(BOARD_SIZE).fill(null),
+      opponentPets: Array(BOARD_SIZE).fill(null),
+      playerGoldSpent: 0,
+      opponentGoldSpent: 0,
+      playerRollAmount: 0,
+      opponentRollAmount: 0,
+      playerLevel3Sold: 0,
+      opponentLevel3Sold: 0,
+      playerSummonedAmount: 0,
+      opponentSummonedAmount: 0
+    });
+    const ctx = { runner, player: runner.player };
+    runnerCache.set(packId, ctx);
+    return ctx;
+  };
+
+  packIds.forEach((packId) => {
+    const pets = state.packs[String(packId)]?.pets || [];
+    const runnerCtx = getRunnerForPack(packId);
+    pets.forEach((pet) => {
+      const key = normalizeName(pet?.name || '');
+      if (!key) return;
+      let hasMetaRoll = false;
+      if (runnerCtx) {
+        const { runner, player } = runnerCtx;
+        for (let i = 0; i < BOARD_SIZE; i += 1) player.setPet(i, undefined, true);
+        runner.createPets(player, [{ name: pet.name, attack: 5, health: 5, exp: expForLevel, mana: 0, equipment: null }, null, null, null, null]);
+        const calcPet = player.getPet(0);
+        const abilities = Array.isArray(calcPet?.abilityList) ? calcPet.abilityList : [];
+        hasMetaRoll = abilities.some((a) => Array.isArray(a?.triggers) && a.triggers.some((t) => /roll/i.test(String(t || ''))));
+      }
+      const levels = [pet?.ability?.level1, pet?.ability?.level2, pet?.ability?.level3].map((x) => String(x || '').trim());
+      const hasTextRoll = levels.some((txt) => /\broll(?:s|ed|ing)?\b/i.test(txt));
+      const hasTag = hasMetaRoll || hasTextRoll;
+      if (!hasTag) return;
+      if (!hasMetaRoll && hasTextRoll) fallbackUsed = true;
+      tagsByPetKey[key] = ['roll_trigger'];
+    });
+  });
+
+  state.rollAbilityTagsByPetKey = tagsByPetKey;
+  state.rollTagFallbackUsed = fallbackUsed;
+}
+
+function petHasRollTriggerTag(pet) {
+  const key = normalizeName(pet?.name || '');
+  if (!key) return false;
+  const tags = state.rollAbilityTagsByPetKey?.[key];
+  return Array.isArray(tags) && tags.includes('roll_trigger');
+}
+
+function pulseRollCountersOnBoard() {
+  const until = Date.now() + 1600;
+  for (let i = 0; i < BOARD_SIZE; i += 1) {
+    state.rollCounterPulseUntilBySlot[i] = until;
+  }
+  if (state.rollCounterHideTimer) {
+    clearTimeout(state.rollCounterHideTimer);
+    state.rollCounterHideTimer = null;
+  }
+  state.rollCounterHideTimer = setTimeout(() => {
+    state.rollCounterHideTimer = null;
+    renderBoard();
+  }, 1650);
 }
 
 function computeTextureAudit(packIds = [2, 3, 4, 5]) {
@@ -5592,6 +7226,25 @@ async function loadPackData() {
   return res.json();
 }
 
+async function loadReferenceData() {
+  const safeFetchJson = async (path) => {
+    try {
+      const res = await fetch(path);
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    } catch (_) {
+      return [];
+    }
+  };
+  const pets = await safeFetchJson('assets/reference-pets.json');
+  const foods = await safeFetchJson('assets/reference-food.json');
+  state.referenceData = {
+    pets,
+    foods
+  };
+}
+
 async function verifySpriteData() {
   if (!state.spriteTxtPath) return;
 
@@ -5617,8 +7270,10 @@ async function init() {
       setStatus(`Calculator not loaded: ${err.message}`);
     }
     const packData = await loadPackData();
+    await loadReferenceData();
 
     hydratePackData(packData);
+    buildRollAbilityTagIndex();
     state.textureAudit = computeTextureAudit([2, 3, 4, 5]);
     if ((state.textureAudit.missingPets.length + state.textureAudit.missingFoods.length) > 0) {
       console.log('Missing textures in P2-P5', state.textureAudit);
@@ -5649,12 +7304,11 @@ restartBtn.addEventListener('click', () => {
   setStatus('Game restarted.');
 });
 endTurnBtn.addEventListener('click', endTurn);
-tierUpSkipBtn.addEventListener('click', skipTierUpReward);
 window.addEventListener('scroll', clearTooltip, true);
 window.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape') {
     if (state.toyModalOpen) {
-      closeToyPickerModal();
+      closeToyPickerModal(true);
       return;
     }
     if (state.battleReportModalOpen) {
@@ -5689,12 +7343,12 @@ if (battleSkipBtn) {
   });
 }
 if (toyPickerCloseBtn) {
-  toyPickerCloseBtn.addEventListener('click', closeToyPickerModal);
+  toyPickerCloseBtn.addEventListener('click', () => closeToyPickerModal(true));
 }
 if (toyPickerModal) {
   toyPickerModal.addEventListener('click', (ev) => {
     if (ev.target === toyPickerModal) {
-      closeToyPickerModal();
+      closeToyPickerModal(true);
     }
   });
 }

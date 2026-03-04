@@ -1,0 +1,101 @@
+{
+  "generated_at": "2026-03-04",
+  "authority_reference": {
+    "requested": [
+      "super_auto_pets.md",
+      "pet_data.md",
+      "pet_abilities.md",
+      "shop_engine.md",
+      "tierup_engine.md"
+    ],
+    "found_local": [
+      "super_auto_pets_codex.md",
+      "pack-data.json",
+      "app.js"
+    ],
+    "notes": [
+      "Requested markdown authority files were not present in this workspace.",
+      "Validation used the provided task spec and local pack/app data."
+    ]
+  },
+  "worm_stocking": {
+    "status": "Implemented",
+    "level_mapping": {
+      "level_1": [
+        "1 Gold Apple"
+      ],
+      "level_2": [
+        "1 Gold Apple",
+        "2 Better Apple"
+      ],
+      "level_3": [
+        "1 Gold Apple",
+        "2 Best Apple"
+      ]
+    },
+    "code_paths": [
+      "app.js:getWormStockPlan",
+      "app.js:getWormStockFoodsForLevel",
+      "app.js:applyShopStartTurnEffectAt"
+    ]
+  },
+  "wyvern_tierup_scaling": {
+    "status": "Implemented",
+    "base_options": 2,
+    "extra_options_formula": "sum(levelInt of friendly Wyverns, excluding the leveled pet slot)",
+    "scaling_examples": {
+      "level_1": "+1 option",
+      "level_2": "+2 options",
+      "level_3": "+3 options"
+    },
+    "code_paths": [
+      "app.js:maybeQueueTierUpReward"
+    ]
+  },
+  "tierup_roll_behavior": {
+    "status": "Implemented",
+    "skip_buttons_removed": true,
+    "roll_past_vanishes_rewards": true,
+    "frozen_tierup_moves_to_shop_frozen": true,
+    "code_paths": [
+      "index.html:tierUpInline",
+      "app.js:renderTierUpInline",
+      "app.js:rollPastTierUpRewards",
+      "app.js:rollShop",
+      "app.js:placeTierUpPetIntoShop"
+    ]
+  },
+  "checks": [
+    {
+      "name": "Worm level 1 start-turn stock",
+      "result": "Pass"
+    },
+    {
+      "name": "Worm level 2 start-turn stock",
+      "result": "Pass"
+    },
+    {
+      "name": "Worm level 3 start-turn stock",
+      "result": "Pass"
+    },
+    {
+      "name": "Wyvern extra tier-up options scale by level",
+      "result": "Pass"
+    },
+    {
+      "name": "Tier-ups vanish when rolled past",
+      "result": "Pass"
+    },
+    {
+      "name": "Frozen tier-up options remain frozen after moving to shop",
+      "result": "Pass"
+    },
+    {
+      "name": "Tier-up skip button UI removed",
+      "result": "Pass"
+    }
+  ],
+  "remaining_risks": [
+    "No automated end-to-end simulation harness was run in this patch; validation is code-path and syntax based."
+  ]
+}

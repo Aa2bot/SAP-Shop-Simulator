@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-03-04T18:50:22.843Z",
+  "authority_reference": "super_auto_pets_codex.md",
+  "magpie": {
+    "pack": "Pack 4",
+    "ability_text": {
+      "level1": "End turn: Spend up to 1 gold and gain it back next turn.",
+      "level2": "End turn: Spend up to 2 gold and gain it back next turn.",
+      "level3": "End turn: Spend up to 3 gold and gain it back next turn."
+    },
+    "expected_caps": {
+      "level1": 1,
+      "level2": 2,
+      "level3": 3
+    },
+    "implemented_caps": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "trigger_timing": {
+      "expected": "End turn",
+      "implemented_manual": "End turn",
+      "bridge_reconcile": true
+    }
+  },
+  "gold_flow": {
+    "queue_function_present": true,
+    "turn_start_resolution_present": true,
+    "end_turn_assignment_uses_resolver": true
+  },
+  "discrepancies": [],
+  "summary": {
+    "status": "Aligned",
+    "discrepancy_count": 0
+  }
+}
