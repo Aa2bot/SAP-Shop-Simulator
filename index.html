@@ -88,19 +88,15 @@
         <div id="inventorySlots" class="slots inventory-slots"></div>
       </section>
 
-      <section class="panel battle-panel">
-        <h2>Battle Report</h2>
-        <p id="battleSummary" class="hint">No battle yet.</p>
-        <div id="battleLog" class="battle-log"></div>
-      </section>
     </main>
 
     <footer class="controls">
-      <button id="rollBtn" class="roll-btn">Roll Shop (-1 Gold)</button>
       <span id="statusText" class="status"></span>
+      <button id="battleReportBtn" class="battle-report-btn">Battle Report</button>
     </footer>
   </div>
 
+  <button id="rollBtn" class="roll-btn">Roll Shop (-1 Gold)</button>
   <div id="hoverTooltip" class="hover-tooltip hidden" role="tooltip"></div>
   <div id="battleScreen" class="battle-screen hidden" aria-live="polite">
     <div class="battle-stage">
@@ -133,6 +129,16 @@
       </div>
       <p id="toyPickerContext" class="battle-meta">Choose one available toy.</p>
       <div id="toyChoiceSlots" class="slots toy-choice-slots"></div>
+    </div>
+  </div>
+  <div id="battleReportModal" class="toy-modal hidden" role="dialog" aria-modal="true" aria-labelledby="battleReportTitle">
+    <div class="toy-modal-card report-modal-card">
+      <div class="battle-head">
+        <h2 id="battleReportTitle">Battle Report</h2>
+        <button id="battleReportCloseBtn" class="small-btn close-x-btn" aria-label="Close battle report">X</button>
+      </div>
+      <p id="battleSummary" class="hint">No battle yet.</p>
+      <div id="battleLog" class="battle-log"></div>
     </div>
   </div>
 

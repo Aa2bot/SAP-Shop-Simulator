@@ -127,8 +127,8 @@ body.modal-open {
 }
 
 .board-slots { grid-template-columns: repeat(5, minmax(100px, 1fr)); }
-.shop-slots { grid-template-columns: repeat(3, minmax(100px, 1fr)); }
-.food-slots { grid-template-columns: repeat(1, minmax(120px, 1fr)); }
+.shop-slots { grid-template-columns: repeat(var(--pet-shop-cols, 3), minmax(var(--pet-shop-min, 100px), 1fr)); }
+.food-slots { grid-template-columns: repeat(var(--food-shop-cols, 1), minmax(88px, 1fr)); }
 .extra-food-slots { grid-template-columns: repeat(5, minmax(90px, 1fr)); }
 
 .battle-panel {
@@ -238,8 +238,16 @@ body.modal-open {
   animation: clashOpponent 260ms ease;
 }
 
+.battle-slot.target-shake {
+  animation: targetShake 220ms ease;
+}
+
 .battle-slot.hit-flash {
   animation: hitFlash 280ms ease;
+}
+
+.battle-slot.battle-slot-jump {
+  animation: battleSlotJump 300ms ease;
 }
 
 .slot.ability-pulse,
@@ -276,6 +284,10 @@ body.modal-open {
 }
 
 .battle-effects-row .perk-overlay {
+  position: static;
+}
+
+.battle-effects-row .ailment-overlay {
   position: static;
 }
 
@@ -347,6 +359,48 @@ body.modal-open {
   opacity: 1;
 }
 
+.ailment-overlay {
+  background: rgba(156, 44, 29, 0.9);
+  border-color: rgba(255, 210, 196, 0.7);
+  box-shadow: 0 4px 9px rgba(123, 31, 18, 0.28);
+}
+
+.ailment-overlay.ailment-pop {
+  animation: ailmentPop 280ms ease;
+}
+
+.ailment-overlay.ailment-remove {
+  animation: ailmentFadeOut 420ms ease forwards;
+}
+
+.mana-overlay {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  transform: translateX(-50%);
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(182, 225, 255, 0.8);
+  background: rgba(12, 74, 112, 0.92);
+  color: #eaf8ff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.mana-overlay img {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+}
+
 .battle-center {
   margin: 10px 0;
   border-radius: 10px;
@@ -412,6 +466,18 @@ body.modal-open {
   background: rgba(33, 81, 62, 0.94);
 }
 
+.stat-float.level {
+  background: rgba(54, 49, 131, 0.96);
+}
+
+.stat-float.ailment {
+  background: rgba(128, 35, 20, 0.96);
+}
+
+.stat-float.ailment-remove {
+  background: rgba(46, 95, 58, 0.95);
+}
+
 .stat-float.damage {
   background: rgba(120, 17, 17, 0.95);
   color: #ffe7e7;
@@ -463,6 +529,34 @@ body.modal-open {
   animation: slotIn 180ms ease;
 }
 
+.food-slots .slot {
+  min-height: 132px;
+  padding: 6px;
+}
+
+.slot.stock-pop {
+  animation: slotIn 180ms ease, stockPopIn 440ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.slot.food-discounted {
+  animation: slotIn 180ms ease, discountPulse 480ms ease;
+}
+
+.slot.food-discounted::after {
+  content: attr(data-discount) 'g';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 6;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 11px;
+  color: #f0fff6;
+  background: rgba(20, 102, 56, 0.94);
+  border: 1px solid rgba(202, 255, 226, 0.6);
+  animation: priceDropTag 650ms ease;
+}
+
 .slot:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.12);
@@ -490,6 +584,45 @@ body.modal-open {
 .slot:hover .card-art {
   transform: translateY(-1px) scale(1.02);
   filter: saturate(1.08);
+}
+
+.slot.level-up-pulse,
+.battle-slot.level-up-pulse {
+  animation: levelUpPulse 620ms ease;
+}
+
+.shop-effects-row {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  display: flex;
+  gap: 4px;
+  z-index: 6;
+}
+
+.xp-fill-fx {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 34px;
+  height: 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(42, 69, 116, 0.18);
+  overflow: hidden;
+}
+
+.xp-fill-fx::before {
+  content: '';
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #73b6ff, #1e84ff);
+  animation: xpFillRun 520ms ease forwards;
+}
+
+.tier-up-inline.reward-pulse {
+  animation: revealUp 180ms ease, tierRewardPulse 740ms ease;
 }
 
 .slot .name {
@@ -581,15 +714,63 @@ button:active { transform: translateY(1px) scale(0.98); }
   margin-top: auto;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 10px;
   padding: 14px 16px;
 }
 
 .roll-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 9000;
   background: #8d4d1f;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  min-width: 176px;
+  min-height: 52px;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.32);
+  transform: none;
+  transition: none;
+  animation: none;
 }
 
 .roll-btn:hover { background: #733f19; }
+.roll-btn:active { transform: none; }
+
+.battle-report-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 16px;
+  z-index: 45;
+  background: #22537c;
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-width: 140px;
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.28);
+}
+
+.battle-report-btn:hover {
+  background: #1a4161;
+}
+
+body.shop-wide-turn .layout {
+  width: min(1260px, 98vw);
+  transform: translateX(-20px);
+}
+
+body.shop-wide-turn .shop-panel {
+  position: relative;
+  left: -8px;
+}
 
 .status {
   background: rgba(255, 255, 255, 0.9);
@@ -602,6 +783,11 @@ button:active { transform: translateY(1px) scale(0.98); }
 
 .status.bump {
   animation: statusBump 220ms ease;
+}
+
+.shop-slots.shop-expand,
+.food-slots.shop-expand {
+  animation: shopExpandReveal 620ms ease;
 }
 
 .top-controls {
@@ -719,6 +905,22 @@ button:active { transform: translateY(1px) scale(0.98); }
 
 .toy-modal.closing .toy-modal-card {
   animation: modalPopOut 160ms ease forwards;
+}
+
+.report-modal-card {
+  width: min(900px, 95vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-modal-card .battle-log {
+  max-height: min(66vh, 560px);
+}
+
+.close-x-btn {
+  min-width: 40px;
+  padding: 7px 10px;
 }
 
 .toy-choice-slots {
@@ -872,15 +1074,17 @@ button:active { transform: translateY(1px) scale(0.98); }
 }
 
 @keyframes clashPlayer {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(14px) scale(1.02); }
-  100% { transform: translateX(0); }
+  0% { transform: translateX(0) translateY(0) scale(1); }
+  40% { transform: translateX(16px) translateY(-10px) scale(1.03); }
+  70% { transform: translateX(20px) translateY(-1px) scale(1.04); }
+  100% { transform: translateX(0) translateY(0) scale(1); }
 }
 
 @keyframes clashOpponent {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(-14px) scale(1.02); }
-  100% { transform: translateX(0); }
+  0% { transform: translateX(0) translateY(0) scale(1); }
+  40% { transform: translateX(-16px) translateY(-10px) scale(1.03); }
+  70% { transform: translateX(-20px) translateY(-1px) scale(1.04); }
+  100% { transform: translateX(0) translateY(0) scale(1); }
 }
 
 @keyframes hitFlash {
@@ -910,9 +1114,79 @@ button:active { transform: translateY(1px) scale(0.98); }
   to { opacity: 0; }
 }
 
+@keyframes stockPopIn {
+  0% { transform: translateY(10px) scale(0.95); opacity: 0.65; }
+  70% { transform: translateY(-2px) scale(1.04); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes discountPulse {
+  0% { box-shadow: 0 0 0 rgba(13, 117, 64, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(13, 117, 64, 0.2); }
+  100% { box-shadow: 0 0 0 rgba(13, 117, 64, 0); }
+}
+
+@keyframes priceDropTag {
+  0% { transform: translateY(-3px) scale(0.9); opacity: 0; }
+  30% { transform: translateY(0) scale(1.04); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes ailmentPop {
+  0% { transform: scale(0.75) translateY(-2px); opacity: 0; }
+  60% { transform: scale(1.08) translateY(0); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes ailmentFadeOut {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.82) translateY(-4px); }
+}
+
+@keyframes targetShake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  75% { transform: translateX(-1px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes levelUpPulse {
+  0% { box-shadow: 0 0 0 rgba(50, 94, 224, 0); }
+  35% { box-shadow: 0 0 0 6px rgba(50, 94, 224, 0.22); }
+  100% { box-shadow: 0 0 0 rgba(50, 94, 224, 0); }
+}
+
+@keyframes xpFillRun {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes tierRewardPulse {
+  0% { box-shadow: 0 0 0 rgba(76, 98, 212, 0); }
+  45% { box-shadow: 0 0 0 8px rgba(76, 98, 212, 0.18); }
+  100% { box-shadow: 0 0 0 rgba(76, 98, 212, 0); }
+}
+
+@keyframes shopExpandReveal {
+  0% { transform: scale(0.985); opacity: 0.82; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 @keyframes modalPopOut {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to { opacity: 0; transform: translateY(6px) scale(0.985); }
+}
+
+@keyframes battleSlotJump {
+  from {
+    transform: translateX(var(--jump-shift-x, 0));
+    opacity: 0.88;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -929,9 +1203,12 @@ button:active { transform: translateY(1px) scale(0.98); }
 
   .board-slots,
   .shop-slots,
-  .food-slots,
   .tier-up-choices {
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+
+  .food-slots {
+    grid-template-columns: repeat(var(--food-shop-cols, 1), minmax(82px, 1fr));
   }
 
   .toy-modal-card {
@@ -942,5 +1219,30 @@ button:active { transform: translateY(1px) scale(0.98); }
 
   .toy-choice-slots {
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+
+  .roll-btn {
+    left: 12px;
+    bottom: 14px;
+    min-width: 160px;
+    font-size: 15px;
+    padding: 10px 12px;
+  }
+
+  .battle-report-btn {
+    right: 12px;
+    bottom: 14px;
+    min-width: 130px;
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  body.shop-wide-turn .layout {
+    transform: none;
+    width: min(1180px, 96vw);
+  }
+
+  body.shop-wide-turn .shop-panel {
+    left: 0;
   }
 }

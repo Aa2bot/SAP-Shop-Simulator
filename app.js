@@ -148,6 +148,28 @@ const PERK_CANONICAL_NAMES = {
   oystermushroom: 'Oyster Mushroom'
 };
 
+const AILMENT_CANONICAL_NAMES = {
+  spooked: 'Spooked',
+  toasty: 'Toasty',
+  weak: 'Weak',
+  cold: 'Cold',
+  ink: 'Ink',
+  confused: 'Confused',
+  confusion: 'Confused',
+  silly: 'Silly',
+  webbed: 'Webbed',
+  web: 'Webbed',
+  tasty: 'Tasty',
+  sleepy: 'Sleepy',
+  dazed: 'Dazed',
+  crisp: 'Crisp',
+  bloated: 'Bloated',
+  bloat: 'Bloated',
+  cursed: 'Cursed',
+  curse: 'Cursed',
+  icky: 'Icky'
+};
+
 const CALCULATOR_BUNDLE_PATH = 'assets/sap-calculator-sim.js';
 const CALCULATOR_PACK_BY_APP_ID = {
   1: 'Turtle',
@@ -251,9 +273,27 @@ const state = {
     idx: -1
   },
   toyModalFocusIndex: 0,
+  battleReportModalOpen: false,
+  debugRootCauseLogged: {},
+  rollActionLocked: false,
+  lastRollInputAt: 0,
+  shopAilmentBySlot: Array.from({ length: BOARD_SIZE }, () => ''),
+  battleAilmentBySide: {
+    player: Array.from({ length: BOARD_SIZE }, () => ''),
+    opponent: Array.from({ length: BOARD_SIZE }, () => '')
+  },
+  battleManaBySide: {
+    player: Array.from({ length: BOARD_SIZE }, () => 0),
+    opponent: Array.from({ length: BOARD_SIZE }, () => 0)
+  },
+  lastBattleRenderBySide: {
+    player: [],
+    opponent: []
+  },
   debugTriggerLog: [],
   levelHistoryBySlot: Array.from({ length: BOARD_SIZE }, () => []),
-  toyModalCloseTimer: null
+  toyModalCloseTimer: null,
+  battleReportModalCloseTimer: null
 };
 
 const goldValue = document.getElementById('goldValue');
@@ -273,6 +313,9 @@ const toyPickerModal = document.getElementById('toyPickerModal');
 const toyPickerTitle = document.getElementById('toyPickerTitle');
 const toyPickerContext = document.getElementById('toyPickerContext');
 const toyPickerCloseBtn = document.getElementById('toyPickerCloseBtn');
+const battleReportModal = document.getElementById('battleReportModal');
+const battleReportBtn = document.getElementById('battleReportBtn');
+const battleReportCloseBtn = document.getElementById('battleReportCloseBtn');
 const inventorySlots = document.getElementById('inventorySlots');
 const itemSortSelect = document.getElementById('itemSortSelect');
 const itemFilterInput = document.getElementById('itemFilterInput');
@@ -353,8 +396,10 @@ function randFrom(list) {
 
 function pickN(list, count) {
   const out = [];
-  for (let i = 0; i < count; i += 1) {
-    const item = randFrom(list);
+  const copy = Array.isArray(list) ? [...list] : [];
+  for (let i = 0; i < count && copy.length; i += 1) {
+    const pick = Math.floor(Math.random() * copy.length);
+    const item = copy.splice(pick, 1)[0];
     if (item) out.push(item);
   }
   return out;
@@ -365,6 +410,16 @@ function setStatus(msg) {
   statusText.classList.remove('bump');
   void statusText.offsetWidth;
   statusText.classList.add('bump');
+}
+
+function logRootCauseOnce(key, message) {
+  if (!key || !message) return;
+  if (!state.debugRootCauseLogged || typeof state.debugRootCauseLogged !== 'object') {
+    state.debugRootCauseLogged = {};
+  }
+  if (state.debugRootCauseLogged[key]) return;
+  state.debugRootCauseLogged[key] = true;
+  pushDebugTrigger('RootCause', message);
 }
 
 function playPetBuySound(name) {
@@ -387,10 +442,81 @@ function playUiSound(key, volume = 0.75) {
 function updateHud() {
   goldValue.textContent = String(state.gold);
   turnValue.textContent = String(state.turn);
+  updateRollButtonState();
   renderActiveToyDisplay();
   renderToyChoiceDisplay();
   renderInventoryPanel();
   applyAccessibilitySettings();
+}
+
+function updateRollButtonState() {
+  if (!rollBtn) return;
+  rollBtn.disabled = Boolean(state.rollActionLocked);
+}
+
+function getPetShopSizeForTurn(turn = state.turn) {
+  if (turn >= 9) return 5;
+  if (turn >= 5) return 4;
+  return PET_SHOP_SIZE;
+}
+
+function getFoodShopSizeForTurn(turn = state.turn) {
+  if (turn >= 5) return 2;
+  return FOOD_SHOP_SIZE;
+}
+
+function updateShopGridLayout() {
+  if (petSlots) {
+    petSlots.style.setProperty('--pet-shop-cols', String(Math.max(3, state.shopPets.length)));
+    petSlots.style.setProperty('--pet-shop-min', state.shopPets.length >= 5 ? '76px' : '100px');
+  }
+  if (foodSlots) {
+    foodSlots.style.setProperty('--food-shop-cols', String(Math.max(1, state.shopFoods.length)));
+  }
+  if (document.body) {
+    const wideShop = Number(state.turn || 1) >= 9 && state.shopPets.length >= 5;
+    document.body.classList.toggle('shop-wide-turn', wideShop);
+  }
+}
+
+function animateShopExpansion(kind) {
+  const container = kind === 'food' ? foodSlots : petSlots;
+  if (!container) return;
+  container.classList.remove('shop-expand');
+  void container.offsetWidth;
+  container.classList.add('shop-expand');
+  setTimeout(() => container.classList.remove('shop-expand'), 700);
+}
+
+function ensureShopSlotCounts() {
+  const wantPets = getPetShopSizeForTurn(state.turn);
+  const wantFoods = getFoodShopSizeForTurn(state.turn);
+  if (state.shopPets.length < wantPets) {
+    const add = wantPets - state.shopPets.length;
+    state.shopPets.push(...Array.from({ length: add }, () => ({ item: null, frozen: false })));
+    animateShopExpansion('pet');
+  } else if (state.shopPets.length > wantPets) {
+    state.shopPets = state.shopPets.slice(0, wantPets);
+  }
+  if (state.shopFoods.length < wantFoods) {
+    const add = wantFoods - state.shopFoods.length;
+    state.shopFoods.push(...Array.from({ length: add }, () => ({ item: null, frozen: false })));
+    animateShopExpansion('food');
+  } else if (state.shopFoods.length > wantFoods) {
+    state.shopFoods = state.shopFoods.slice(0, wantFoods);
+  }
+  updateShopGridLayout();
+}
+
+function markFoodSlotFx(slot, fxKind, amount = 0) {
+  if (!slot) return;
+  const now = Date.now();
+  if (fxKind === 'stock') {
+    slot.stockPulseUntil = now + 900;
+  } else if (fxKind === 'discount') {
+    slot.discountPulseUntil = now + 900;
+    slot.discountAmount = Math.max(0, Number(amount || 0));
+  }
 }
 
 function renderActiveToyDisplay() {
@@ -504,7 +630,7 @@ function openToyPickerModal() {
   toyPickerModal.classList.remove('hidden', 'closing');
   state.toyModalOpen = true;
   state.toyModalFocusIndex = 0;
-  document.body.classList.add('modal-open');
+  syncBodyModalState();
   focusToyChoiceByIndex(0);
 }
 
@@ -520,14 +646,54 @@ function closeToyPickerModal() {
   state.toyModalCloseTimer = setTimeout(() => {
     toyPickerModal.classList.add('hidden');
     toyPickerModal.classList.remove('closing');
-    document.body.classList.remove('modal-open');
+    syncBodyModalState();
     state.toyModalCloseTimer = null;
   }, 170);
 }
 
+function syncBodyModalState() {
+  if (!document.body) return;
+  const anyOpen = Boolean(state.toyModalOpen || state.battleReportModalOpen);
+  document.body.classList.toggle('modal-open', anyOpen);
+}
+
+function openBattleReportModal() {
+  if (!battleReportModal) return;
+  if (state.battleReportModalCloseTimer) {
+    clearTimeout(state.battleReportModalCloseTimer);
+    state.battleReportModalCloseTimer = null;
+  }
+  battleReportModal.classList.remove('hidden', 'closing');
+  state.battleReportModalOpen = true;
+  syncBodyModalState();
+}
+
+function closeBattleReportModal() {
+  if (!battleReportModal) return;
+  if (state.battleReportModalCloseTimer) {
+    clearTimeout(state.battleReportModalCloseTimer);
+    state.battleReportModalCloseTimer = null;
+  }
+  state.battleReportModalOpen = false;
+  battleReportModal.classList.add('closing');
+  state.battleReportModalCloseTimer = setTimeout(() => {
+    battleReportModal.classList.add('hidden');
+    battleReportModal.classList.remove('closing');
+    syncBodyModalState();
+    state.battleReportModalCloseTimer = null;
+  }, 170);
+}
+
 function isUiModalBlocking() {
-  if (!toyPickerModal) return false;
-  return state.toyModalOpen || toyPickerModal.classList.contains('closing');
+  const toyBlocking = Boolean(
+    toyPickerModal
+    && (state.toyModalOpen || toyPickerModal.classList.contains('closing'))
+  );
+  const reportBlocking = Boolean(
+    battleReportModal
+    && (state.battleReportModalOpen || battleReportModal.classList.contains('closing'))
+  );
+  return toyBlocking || reportBlocking;
 }
 
 function focusToyChoiceByIndex(idx) {
@@ -725,6 +891,12 @@ function spawnStatFloat(targetEl, kind, amountOrText) {
     tag.textContent = `-${Math.max(0, Number(amountOrText || 0))}`;
   } else if (kind === 'heal') {
     tag.textContent = `+${Math.max(0, Number(amountOrText || 0))}`;
+  } else if (kind === 'level') {
+    tag.textContent = String(amountOrText || 'LEVEL UP!');
+  } else if (kind === 'ailment') {
+    tag.textContent = String(amountOrText || 'AILMENT');
+  } else if (kind === 'ailment-remove') {
+    tag.textContent = String(amountOrText || 'CURED');
   } else {
     tag.textContent = String(amountOrText || 'Perk');
   }
@@ -835,6 +1007,49 @@ function animatePerkMentions(text, snapshot) {
   checkSide('opponent');
 }
 
+function animateAilmentMentions(text, snapshot) {
+  const ailment = inferAilmentFromText(text);
+  if (!ailment || !snapshot) return;
+  const label = getCanonicalAilmentName(ailment) || ailment.toUpperCase();
+  const lower = String(text || '').toLowerCase();
+  const checkSide = (side) => {
+    for (let i = 0; i < BOARD_SIZE; i += 1) {
+      const pet = snapshot?.[side]?.[i];
+      if (!pet?.name) continue;
+      const petName = String(pet.name).toLowerCase();
+      if (!petName || !lower.includes(petName)) continue;
+      const el = getBattleSlotElement(side, i);
+      if (!el) continue;
+      const badge = createAilmentBadgeElement(label);
+      if (badge) {
+        badge.classList.add('ailment-pop');
+        const row = el.querySelector('.battle-effects-row');
+        if (row) row.appendChild(badge);
+      }
+      spawnStatFloat(el, 'ailment', label.toUpperCase());
+    }
+  };
+  checkSide('player');
+  checkSide('opponent');
+}
+
+function animateBattleLevelMentions(text, snapshot) {
+  if (!snapshot) return;
+  const lower = String(text || '').toLowerCase();
+  if (!/level[\s-]?up|leveled up|levelled up/i.test(lower)) return;
+  const animateSide = (side) => {
+    for (let i = 0; i < BOARD_SIZE; i += 1) {
+      const pet = snapshot?.[side]?.[i];
+      if (!pet?.name) continue;
+      if (lower.includes(String(pet.name).toLowerCase())) {
+        animateLevelUpAt('battle', i, side);
+      }
+    }
+  };
+  animateSide('player');
+  animateSide('opponent');
+}
+
 function pulseAbilityOnElement(el, label = 'Ability') {
   if (!el) return;
   el.classList.remove('ability-pulse');
@@ -847,6 +1062,33 @@ function pulseAbilityOnElement(el, label = 'Ability') {
 function pulseShopAbilityAt(idx, label) {
   const el = getBoardSlotElement(idx);
   pulseAbilityOnElement(el, label);
+}
+
+function animateShopXpFillAt(idx) {
+  const slotEl = getBoardSlotElement(idx);
+  if (!slotEl) return;
+  const fx = document.createElement('div');
+  fx.className = 'xp-fill-fx';
+  slotEl.appendChild(fx);
+  setTimeout(() => fx.remove(), 760);
+}
+
+function animateLevelUpAt(scope, idx, side = 'player') {
+  const slotEl = scope === 'battle' ? getBattleSlotElement(side, idx) : getBoardSlotElement(idx);
+  if (!slotEl) return;
+  slotEl.classList.remove('level-up-pulse');
+  void slotEl.offsetWidth;
+  slotEl.classList.add('level-up-pulse');
+  spawnStatFloat(slotEl, 'level', 'LEVEL UP!');
+  setTimeout(() => slotEl.classList.remove('level-up-pulse'), 620);
+}
+
+function animateTierUpRewardCue() {
+  if (!tierUpInline || tierUpInline.classList.contains('hidden')) return;
+  tierUpInline.classList.remove('reward-pulse');
+  void tierUpInline.offsetWidth;
+  tierUpInline.classList.add('reward-pulse');
+  setTimeout(() => tierUpInline.classList.remove('reward-pulse'), 740);
 }
 
 function findSnapshotPetIndexByName(sideArr, name) {
@@ -903,16 +1145,17 @@ function animateBattleClash(text, snapshot) {
   state.battleActive = { side: attackerSide, idx: attackerIdx };
 
   attackerEl.classList.remove('clash-player', 'clash-opponent');
-  defenderEl.classList.remove('hit-flash');
+  defenderEl.classList.remove('hit-flash', 'target-shake');
   void attackerEl.offsetWidth;
   attackerEl.classList.add(attackerSide === 'player' ? 'clash-player' : 'clash-opponent');
   defenderEl.classList.add('hit-flash');
+  defenderEl.classList.add('target-shake');
   attackerEl.classList.add('active-turn');
   spawnFlyIcon(attackerEl, defenderEl, FIST_ICON, Math.max(1, attack.damage || 1));
   spawnStatFloat(defenderEl, 'damage', Math.max(1, attack.damage || 1));
   setTimeout(() => {
     attackerEl.classList.remove('clash-player', 'clash-opponent');
-    defenderEl.classList.remove('hit-flash');
+    defenderEl.classList.remove('hit-flash', 'target-shake');
     attackerEl.classList.remove('active-turn');
   }, 320);
 }
@@ -959,6 +1202,7 @@ function extractBattleSnapshot(rawMessage) {
         attack: Number(m[3]),
         health: Number(m[4]),
         equipment: parsed.perkName || null,
+        ailment: parsed.ailmentName || '',
         path: resolveTexture(parsed.displayName)
       };
     }
@@ -974,6 +1218,19 @@ function extractBattleSnapshot(rawMessage) {
 function renderBattleSceneSlots(container, slots, side = 'player', report = null) {
   if (!container) return;
   container.innerHTML = '';
+  const prevSlots = Array.isArray(state.lastBattleRenderBySide?.[side]) ? state.lastBattleRenderBySide[side] : [];
+  const prevIndexByKey = new Map();
+  prevSlots.forEach((prevPet, prevIdx) => {
+    if (!prevPet) return;
+    const key = [
+      normalizeName(prevPet.name),
+      Number(prevPet.attack || 0),
+      Number(prevPet.health || 0),
+      normalizeName(prevPet.equipment || ''),
+      normalizeName(prevPet.ailment || '')
+    ].join('|');
+    if (!prevIndexByKey.has(key)) prevIndexByKey.set(key, prevIdx);
+  });
   for (let i = 0; i < BOARD_SIZE; i += 1) {
     const pet = slots[i] || null;
     const el = document.createElement('div');
@@ -981,6 +1238,14 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
     el.dataset.battleSlot = String(i);
     el.dataset.battleSide = side;
     if (!pet) {
+      if (!state.battleAilmentBySide?.[side]) {
+        state.battleAilmentBySide[side] = Array.from({ length: BOARD_SIZE }, () => '');
+      }
+      if (!state.battleManaBySide?.[side]) {
+        state.battleManaBySide[side] = Array.from({ length: BOARD_SIZE }, () => 0);
+      }
+      state.battleAilmentBySide[side][i] = '';
+      state.battleManaBySide[side][i] = 0;
       const blank = document.createElement('div');
       blank.className = 'battle-slot-name';
       blank.textContent = 'Empty';
@@ -1008,13 +1273,51 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
         ? pet.equipment
         : (pet.equipment?.name || (typeof initial?.equipment === 'string' ? initial.equipment : (initial?.equipment?.name || '')))
     );
+    const ailmentName = getCanonicalAilmentName(
+      pet.ailment
+      || (typeof pet.equipment === 'string' ? pet.equipment : (pet.equipment?.name || ''))
+    );
     const perkBadge = createPerkBadgeElement(perkName);
+    const ailmentBadge = createAilmentBadgeElement(ailmentName);
     const effectsRow = document.createElement('div');
     effectsRow.className = 'battle-effects-row';
+    const prevAilment = String(state.battleAilmentBySide?.[side]?.[i] || '');
+    if (!state.battleAilmentBySide?.[side]) {
+      state.battleAilmentBySide[side] = Array.from({ length: BOARD_SIZE }, () => '');
+    }
+    state.battleAilmentBySide[side][i] = ailmentName;
+    if (ailmentBadge && ailmentName && ailmentName !== prevAilment) {
+      ailmentBadge.classList.add('ailment-pop');
+    }
+    if (!ailmentName && prevAilment) {
+      const cleared = createAilmentBadgeElement(prevAilment);
+      if (cleared) {
+        cleared.classList.add('ailment-remove');
+        effectsRow.appendChild(cleared);
+      }
+    }
     if (perkBadge) effectsRow.appendChild(perkBadge);
+    if (ailmentBadge) effectsRow.appendChild(ailmentBadge);
     const name = document.createElement('div');
     name.className = 'battle-slot-name';
     name.textContent = pet.name;
+    const mana = Math.max(0, Number(state.battleManaBySide?.[side]?.[i] || 0));
+    if (mana > 0) {
+      const manaBadge = createManaBadgeElement(mana);
+      if (manaBadge) el.appendChild(manaBadge);
+    }
+    const moveKey = [
+      normalizeName(pet.name),
+      Number(pet.attack || 0),
+      Number(pet.health || 0),
+      normalizeName(perkName || ''),
+      normalizeName(ailmentName || '')
+    ].join('|');
+    const prevIdx = prevIndexByKey.get(moveKey);
+    if (Number.isInteger(prevIdx) && prevIdx !== i) {
+      el.classList.add('battle-slot-jump');
+      el.style.setProperty('--jump-shift-x', `${(prevIdx - i) * 96}px`);
+    }
     const hoverPet = {
       name: String(initial?.name || pet.name || ''),
       tier: Number(initial?.tier || 1),
@@ -1038,6 +1341,10 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
     el.appendChild(name);
     container.appendChild(el);
   }
+  if (!state.lastBattleRenderBySide) {
+    state.lastBattleRenderBySide = { player: [], opponent: [] };
+  }
+  state.lastBattleRenderBySide[side] = slots.map((pet) => (pet ? { ...pet } : null));
 }
 
 function createBattleStatBars(attack, health, maxAttack, maxHealth) {
@@ -1065,6 +1372,15 @@ function showBattleScene(report) {
   if (!battleScreen) return;
   state.battlePlaybackSkip = false;
   state.battleActive = { side: null, idx: -1 };
+  state.battleAilmentBySide = {
+    player: Array.from({ length: BOARD_SIZE }, () => ''),
+    opponent: Array.from({ length: BOARD_SIZE }, () => '')
+  };
+  state.battleManaBySide = {
+    player: Array.from({ length: BOARD_SIZE }, (_, i) => Math.max(0, Number(report?.playerInitialPets?.[i]?.mana || 0))),
+    opponent: Array.from({ length: BOARD_SIZE }, (_, i) => Math.max(0, Number(report?.opponentInitialPets?.[i]?.mana || 0)))
+  };
+  state.lastBattleRenderBySide = { player: [], opponent: [] };
   battleSceneMeta.textContent = `Turn ${report.turn} | Opponent pack: ${report.opponentPackName}`;
   if (battleSceneLevels) {
     battleSceneLevels.textContent = `Your levels: ${summarizeTeamLevels(report.playerInitialPets) || 'none'} | Opponent levels: ${summarizeTeamLevels(report.opponentInitialPets) || 'none'}`;
@@ -1123,6 +1439,8 @@ async function playBattleScene(report) {
       animateBattlePhaseCue(text, lastSnapshot);
       animateBattleClash(text, lastSnapshot);
       animatePerkMentions(text, lastSnapshot);
+      animateAilmentMentions(text, lastSnapshot);
+      animateBattleLevelMentions(text, lastSnapshot);
 
       const gain = text.match(/gained?\s+(\d+)\s+trumpets?/i) || text.match(/gain(?:s)?\s+(\d+)\s+trumpets?/i);
       if (gain) {
@@ -1151,6 +1469,29 @@ async function playBattleScene(report) {
       const ailment = inferAilmentFromText(text);
       if (ailment) {
         lastAilment = ailment.toUpperCase();
+      }
+      const manaGain = text.match(/gain(?:ed|s)?\s+(\d+)\s+mana/i);
+      const manaSpent = text.match(/spen(?:d|t)\s+(\d+)\s+mana/i);
+      if (manaGain || manaSpent) {
+        const actorName = String(text.split(' ')[0] || '').trim();
+        const amount = Number((manaGain || manaSpent)?.[1] || 0);
+        const playerIdx = findSnapshotPetIndexByName(lastSnapshot?.player, actorName);
+        const opponentIdx = findSnapshotPetIndexByName(lastSnapshot?.opponent, actorName);
+        if (playerIdx >= 0) {
+          const cur = Math.max(0, Number(state.battleManaBySide?.player?.[playerIdx] || 0));
+          state.battleManaBySide.player[playerIdx] = manaGain ? cur + amount : Math.max(0, cur - amount);
+          if (lastSnapshot) {
+            renderBattleSceneSlots(battlePlayerSlots, lastSnapshot.player, 'player', report);
+            renderBattleSceneSlots(battleOpponentSlots, lastSnapshot.opponent, 'opponent', report);
+          }
+        } else if (opponentIdx >= 0) {
+          const cur = Math.max(0, Number(state.battleManaBySide?.opponent?.[opponentIdx] || 0));
+          state.battleManaBySide.opponent[opponentIdx] = manaGain ? cur + amount : Math.max(0, cur - amount);
+          if (lastSnapshot) {
+            renderBattleSceneSlots(battlePlayerSlots, lastSnapshot.player, 'player', report);
+            renderBattleSceneSlots(battleOpponentSlots, lastSnapshot.opponent, 'opponent', report);
+          }
+        }
       }
       updateBattleStatusLine();
     }
@@ -1285,6 +1626,203 @@ function parseStockCopyCountFromAbility(abilityText, fallback = 1) {
   const m = text.match(/Stock\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+free\s+cop(?:y|ies)/i);
   const n = parseCountWord(m?.[1] || '');
   return n > 0 ? n : Math.max(1, Number(fallback || 1));
+}
+
+function queueNextTurnGold(amount) {
+  const add = Math.max(0, Number(amount || 0));
+  if (!add) return 0;
+  state.nextTurnBonusGold += add;
+  return add;
+}
+
+function parseNextTurnGoldFromAbility(abilityText) {
+  const text = String(abilityText || '').trim();
+  if (!text) return 0;
+  const direct = text.match(/Gain\s+\+(\d+)\s+gold(?:\s+on)?\s+next\s+turn/i);
+  if (direct) return Math.max(0, Number(direct[1] || 0));
+  // Covers wording like: "...and +2 gold next turn."
+  const embedded = text.match(/\+(\d+)\s+gold(?:\s+on)?\s+next\s+turn/i);
+  return Math.max(0, Number(embedded?.[1] || 0));
+}
+
+function logsContainNextTurnGoldForPet(logs, petName = '') {
+  const key = normalizeName(petName);
+  if (!key) return false;
+  return (Array.isArray(logs) ? logs : []).some((line) => {
+    const text = String(line || '');
+    const normalized = normalizeName(text);
+    return normalized.includes(key) && /next\s+turn/i.test(text) && /gold/i.test(text);
+  });
+}
+
+function getTemplatePetAcrossPacksByName(name) {
+  const key = normalizeName(name);
+  if (!key) return null;
+  return getAllPetsAcrossPacks().find((pet) => normalizeName(pet?.name || '') === key) || null;
+}
+
+function getAbilityTextForPetLevel(petName, levelInt = 1) {
+  const template = getTemplatePetAcrossPacksByName(petName);
+  if (!template?.ability) return '';
+  const key = levelInt >= 3 ? 'level3' : levelInt >= 2 ? 'level2' : 'level1';
+  return String(template.ability?.[key] || '').trim();
+}
+
+function getNextTurnGoldForTrigger(petName, levelInt = 1, triggerLabel = '') {
+  const trigger = String(triggerLabel || '').trim().toLowerCase();
+  if (!trigger) return 0;
+  const abilityText = getAbilityTextForPetLevel(petName, levelInt);
+  if (!abilityText) return 0;
+  const prefixMap = {
+    faint: /^Faint:/i,
+    sell: /^Sell:/i,
+    end: /^End turn:/i,
+    start: /^Start of turn:/i,
+    levelup: /^Level-up:/i,
+    level: /^Level-up:/i,
+    level_up: /^Level-up:/i
+  };
+  const expected = prefixMap[trigger];
+  if (!expected || !expected.test(abilityText)) return 0;
+  return parseNextTurnGoldFromAbility(abilityText);
+}
+
+function parseImmediateGoldFromAbility(abilityText) {
+  const text = String(abilityText || '').trim();
+  if (!text) return 0;
+  if (/next\s+turn/i.test(text)) return 0;
+  const direct = text.match(/Gain\s+\+(\d+)\s+gold\.?$/i);
+  if (direct) return Math.max(0, Number(direct[1] || 0));
+  const embedded = text.match(/\+(\d+)\s+gold\.?$/i);
+  return Math.max(0, Number(embedded?.[1] || 0));
+}
+
+function getImmediateGoldForTrigger(petName, levelInt = 1, triggerLabel = '') {
+  const trigger = String(triggerLabel || '').trim().toLowerCase();
+  if (!trigger) return 0;
+  const abilityText = getAbilityTextForPetLevel(petName, levelInt);
+  if (!abilityText) return 0;
+  const prefixMap = {
+    sell: /^Sell:/i,
+    faint: /^Faint:/i,
+    end: /^End turn:/i,
+    start: /^Start of turn:/i,
+    levelup: /^Level-up:/i,
+    level: /^Level-up:/i,
+    level_up: /^Level-up:/i
+  };
+  const expected = prefixMap[trigger];
+  if (!expected || !expected.test(abilityText)) return 0;
+  return parseImmediateGoldFromAbility(abilityText);
+}
+
+function queueBattleNextTurnGoldFromReport(report) {
+  const logs = Array.isArray(report?.logs) ? report.logs : [];
+  const playerInitialPets = Array.isArray(report?.playerInitialPets) ? report.playerInitialPets : [];
+  const playerNames = new Set(
+    playerInitialPets
+      .filter(Boolean)
+      .map((pet) => normalizeName(pet?.name || ''))
+      .filter(Boolean)
+  );
+  const playerLevelsByName = {};
+  playerInitialPets.forEach((pet) => {
+    const key = normalizeName(pet?.name || '');
+    if (!key) return;
+    if (!Array.isArray(playerLevelsByName[key])) playerLevelsByName[key] = [];
+    playerLevelsByName[key].push(Math.max(1, Math.min(3, calcLevelFromExp(Number(pet?.exp || 0)))));
+  });
+  Object.keys(playerLevelsByName).forEach((k) => playerLevelsByName[k].sort((a, b) => a - b));
+  if (!logs.length || !playerNames.size) return 0;
+  let queued = 0;
+  logs.forEach((entry) => {
+    const raw = String(entry?.message || '');
+    if (!raw) return;
+    if (extractBattleSnapshot(raw)) return;
+    const text = stripHtmlToText(raw);
+
+    if (!/gold/i.test(text) || !/next\s+turn/i.test(text)) return;
+    const amountMatch = text.match(/\+(\d+)\s+gold(?:\s+on)?\s+next\s+turn/i)
+      || text.match(/gain(?:s|ed)?\s+(\d+)\s+gold(?:\s+on)?\s+next\s+turn/i);
+    const amount = Math.max(0, Number(amountMatch?.[1] || 0));
+    if (!amount) return;
+    const normalizedText = normalizeName(text);
+    const isPlayerTrigger = Array.from(playerNames).some((nameKey) => normalizedText.includes(nameKey));
+    if (!isPlayerTrigger) return;
+    queued += queueNextTurnGold(amount);
+  });
+
+  // Fallback: some battle logs omit explicit "next turn gold" text; infer from trigger + ability text.
+  logs.forEach((entry) => {
+    const raw = String(entry?.message || '');
+    if (!raw) return;
+    if (extractBattleSnapshot(raw)) return;
+    const text = stripHtmlToText(raw);
+    const lower = String(text || '').toLowerCase();
+    if (/next\s+turn/i.test(lower)) return;
+    const trigger = /level[\s-]?up|leveled up|levelled up/i.test(lower)
+      ? 'levelup'
+      : (/faint/i.test(lower) ? 'faint' : '');
+    if (!trigger) return;
+
+    Object.keys(playerLevelsByName).forEach((nameKey) => {
+      if (!normalizeName(text).includes(nameKey)) return;
+      const levels = playerLevelsByName[nameKey];
+      if (!Array.isArray(levels) || !levels.length) return;
+      let triggerLevel = levels[0];
+      if (trigger === 'levelup') {
+        const idx = levels.findIndex((lvl) => lvl < 3);
+        if (idx >= 0) {
+          triggerLevel = levels[idx];
+          levels[idx] = Math.min(3, levels[idx] + 1);
+        }
+      } else if (trigger === 'faint') {
+        triggerLevel = levels.shift();
+      }
+      const amount = getNextTurnGoldForTrigger(nameKey, triggerLevel, trigger);
+      if (amount > 0) {
+        queued += queueNextTurnGold(amount);
+      }
+    });
+  });
+
+  return queued;
+}
+
+function mergeStackedPetStats(basePet, targetPet, sourcePet) {
+  const merged = { ...(basePet || {}) };
+  const targetAtk = Math.max(1, Number(targetPet?.baseAttack || 1));
+  const targetHp = Math.max(1, Number(targetPet?.baseHealth || 1));
+  const sourceAtk = Math.max(1, Number(sourcePet?.baseAttack || 1));
+  const sourceHp = Math.max(1, Number(sourcePet?.baseHealth || 1));
+
+  // Stacking rule: do not add stats together; keep best baseline and add +1/+1.
+  merged.baseAttack = Math.max(1, targetAtk, sourceAtk);
+  merged.baseHealth = Math.max(1, targetHp, sourceHp);
+  merged.baseAttack += 1;
+  merged.baseHealth += 1;
+
+  const targetScore = targetAtk + targetHp;
+  const sourceScore = sourceAtk + sourceHp;
+  const preferred = sourceScore > targetScore ? sourcePet : targetPet;
+  const persistentFields = [
+    'equipment', 'mana', 'tempBuffs', 'triggersConsumed', 'foodsEaten',
+    'battlesFought', 'timesHurt', 'friendsDiedBeforeBattle', 'sellValue',
+    'copiedAbilityName', 'copiedAbilityLevel', 'copyExpiresTurn', 'calcPetState'
+  ];
+  persistentFields.forEach((field) => {
+    if (preferred && preferred[field] !== undefined) {
+      merged[field] = cloneSerializable(preferred[field]);
+    }
+  });
+  return merged;
+}
+
+function applyLuckyCatLevelUpNextTurnGold(pet, prevLevelInt, newLevelInt) {
+  if (!pet) return 0;
+  if (normalizeName(pet.name) !== 'luckycat') return 0;
+  if (Number(newLevelInt || 0) <= Number(prevLevelInt || 0)) return 0;
+  return queueNextTurnGold(getNextTurnGoldForTrigger(pet.name, newLevelInt, 'levelup'));
 }
 
 function extractToyCatalogFromCalculatorSource(source) {
@@ -1475,6 +2013,7 @@ function bumpPetLevelByExp(pet, gainedExp) {
 function tooltipTextForPet(pet) {
   const temp = getActiveTempBuffTotals(pet);
   const perk = getPetPerkName(pet);
+  const ailment = getPetAilmentName(pet);
   const perkNote = getPerkNoteForName(perk);
   const atkNow = getPetDisplayAttack(pet);
   const hpNow = getPetDisplayHealth(pet);
@@ -1488,6 +2027,7 @@ function tooltipTextForPet(pet) {
       `Level ${pet.levelInt ?? 1} (${pet.levelValue ?? LEVEL_STEPS[0]})`,
       `Level Value: ${formatLevelValue(pet.levelValue ?? getLevelDisplayForExp(pet.exp ?? 0))}`,
       perk ? `Perk: ${perk}` : 'Perk: none',
+      ailment ? `Ailment: ${ailment}` : 'Ailment: none',
       temp.atk || temp.hp ? `Temporary: +${temp.atk}/+${temp.hp} until next turn` : 'Temporary: none',
       `Preview: Attacks for ${atkNow}, survives up to ${hpNow} damage.`,
       abilityPreview ? `Active Ability: ${abilityPreview}` : '',
@@ -1738,6 +2278,47 @@ function createPerkBadgeElement(perkName) {
   return badge;
 }
 
+function createAilmentBadgeElement(ailmentName) {
+  if (!ailmentName) return null;
+  const canonical = getCanonicalAilmentName(ailmentName);
+  if (!canonical) return null;
+  const tex = resolveTexture(canonical);
+  const badge = document.createElement('div');
+  badge.className = 'perk-overlay ailment-overlay';
+  badge.title = canonical;
+  if (tex) {
+    const img = document.createElement('img');
+    img.src = tex;
+    img.alt = canonical;
+    badge.appendChild(img);
+  } else {
+    badge.classList.add('perk-text');
+    const text = document.createElement('span');
+    text.textContent = String(canonical).slice(0, 3).toUpperCase();
+    badge.appendChild(text);
+  }
+  return badge;
+}
+
+function createManaBadgeElement(mana) {
+  const amount = Math.max(0, Number(mana || 0));
+  if (amount <= 0) return null;
+  const tex = resolveTexture('ManaPotion_2x') || resolveTexture('ManaPotion');
+  const badge = document.createElement('div');
+  badge.className = 'mana-overlay';
+  badge.title = `Mana: ${amount}`;
+  if (tex) {
+    const img = document.createElement('img');
+    img.src = tex;
+    img.alt = 'Mana';
+    badge.appendChild(img);
+  }
+  const text = document.createElement('span');
+  text.textContent = String(amount);
+  badge.appendChild(text);
+  return badge;
+}
+
 function getTemplatePetByName(name) {
   const pack = state.packs[String(state.currentPackId)];
   if (!pack?.pets) return null;
@@ -1791,10 +2372,26 @@ function normalizePerkNameKey(perkName) {
   return normalizeName(String(perkName || '').replace(/\s*\([^)]*\)\s*$/, '').trim());
 }
 
+function normalizeAilmentNameKey(ailmentName) {
+  return normalizeName(String(ailmentName || '').replace(/\s*\([^)]*\)\s*$/, '').trim());
+}
+
+function getCanonicalAilmentName(ailmentName) {
+  const raw = String(ailmentName || '').trim();
+  if (!raw) return '';
+  const key = normalizeAilmentNameKey(raw);
+  return AILMENT_CANONICAL_NAMES[key] || '';
+}
+
+function isAilmentName(value) {
+  return Boolean(getCanonicalAilmentName(value));
+}
+
 function getCanonicalPerkName(perkName) {
   const raw = String(perkName || '').trim();
   if (!raw) return '';
   const key = normalizePerkNameKey(raw);
+  if (AILMENT_CANONICAL_NAMES[key]) return '';
   return PERK_CANONICAL_NAMES[key] || raw;
 }
 
@@ -1803,7 +2400,16 @@ function getPetPerkName(pet) {
   const raw = typeof pet.equipment === 'string'
     ? pet.equipment
     : (pet.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : '');
+  if (isAilmentName(raw)) return '';
   return getCanonicalPerkName(raw);
+}
+
+function getPetAilmentName(pet) {
+  if (!pet) return '';
+  const raw = typeof pet.equipment === 'string'
+    ? pet.equipment
+    : (pet.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : '');
+  return getCanonicalAilmentName(raw);
 }
 
 function getPerkNoteForName(perkName) {
@@ -1861,8 +2467,19 @@ function getKnownPerkNames() {
 
 function parseBattleNameAndPerk(parsedName) {
   const raw = String(parsedName || '').trim();
-  if (!raw) return { displayName: '', perkName: '' };
+  if (!raw) return { displayName: '', perkName: '', ailmentName: '' };
   const fullTexture = resolveTexture(raw);
+  const ailmentNames = Object.values(AILMENT_CANONICAL_NAMES).sort((a, b) => b.length - a.length);
+  for (const ailmentName of ailmentNames) {
+    const m = raw.match(new RegExp(`^(.*?)\\s+${escapeRegex(ailmentName)}$`, 'i'));
+    if (!m) continue;
+    const displayName = String(m[1] || '').trim();
+    if (!displayName) continue;
+    const baseTexture = resolveTexture(displayName);
+    if (baseTexture || !fullTexture) {
+      return { displayName, perkName: '', ailmentName: getCanonicalAilmentName(ailmentName) };
+    }
+  }
   const perkNames = getKnownPerkNames();
   for (const perkName of perkNames) {
     const m = raw.match(new RegExp(`^(.*?)\\s+${escapeRegex(perkName)}$`, 'i'));
@@ -1871,10 +2488,10 @@ function parseBattleNameAndPerk(parsedName) {
     if (!displayName) continue;
     const baseTexture = resolveTexture(displayName);
     if (baseTexture || !fullTexture) {
-      return { displayName, perkName };
+      return { displayName, perkName, ailmentName: '' };
     }
   }
-  return { displayName: raw, perkName: '' };
+  return { displayName: raw, perkName: '', ailmentName: '' };
 }
 
 function parseExperienceFromText(abilityText) {
@@ -2068,6 +2685,17 @@ function applySpecialFoodEffect(food, targetIdx, foodRef) {
       slot.item.baseAttack = Math.max(1, Number(slot.item.baseAttack || 1) + atk);
       slot.item.baseHealth = Math.max(1, Number(slot.item.baseHealth || 1) + hp);
     });
+    const buffTierUpPet = (item) => {
+      if (!item) return;
+      item.baseAttack = Math.max(1, Number(item.baseAttack || 1) + atk);
+      item.baseHealth = Math.max(1, Number(item.baseHealth || 1) + hp);
+    };
+    const applyToPending = (pending) => {
+      if (!pending || !Array.isArray(pending.options)) return;
+      pending.options.forEach((opt) => buffTierUpPet(opt?.item));
+    };
+    applyToPending(state.pendingTierUp);
+    (state.pendingTierUpQueue || []).forEach(applyToPending);
     return { ok: true, note: `${food.name}: buffed current/future shop pets` };
   }
 
@@ -2239,7 +2867,12 @@ function applyFoodToBoardPet(food, targetIdx, foodRef = null) {
   if (expGain > 0) {
     const bumped = bumpPetLevelByExp(state.board[targetIdx], expGain);
     state.board[targetIdx] = bumped.pet;
+    applyLuckyCatLevelUpNextTurnGold(state.board[targetIdx], bumped.prevLevelInt, bumped.newLevelInt);
+    animateShopXpFillAt(targetIdx);
     maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt);
+    if (bumped.newLevelInt > bumped.prevLevelInt) {
+      animateLevelUpAt('shop', targetIdx);
+    }
     if (useCalculatorShopBridge() && bumped.newLevelInt > bumped.prevLevelInt) {
       triggerCalculatorLevelUp(targetIdx);
     }
@@ -2942,6 +3575,7 @@ function triggerCalculatorFaint(boardIdx) {
   if (!ctx) return;
   const fainted = ctx.player.getPet(boardIdx);
   if (!fainted) return;
+  const boardPetBefore = state.board[boardIdx] ? { ...state.board[boardIdx] } : null;
   const beforeLen = Array.isArray(ctx.logService.getLogs?.()) ? ctx.logService.getLogs().length : 0;
   if (typeof ctx.runner.abilityService?.triggerFaintEvents !== 'function') return;
   ctx.runner.abilityService.triggerFaintEvents(fainted);
@@ -2953,12 +3587,24 @@ function triggerCalculatorFaint(boardIdx) {
   ctx.player.setPet(boardIdx, undefined, false);
   syncBoardStateFromCalculatorPlayer(ctx.player);
   const out = collectCalculatorLogMessages(ctx.logService, beforeLen);
+  if (boardPetBefore) {
+    const petName = String(boardPetBefore.name || '');
+    const petLevel = Math.max(1, Math.min(3, getPetLevelInt(boardPetBefore)));
+    const abilityText = getAbilityTextForPetLevel(petName, petLevel);
+    const queuedByLog = logsContainNextTurnGoldForPet(out, petName);
+    if (!queuedByLog && /^Faint:/i.test(abilityText)) {
+      const n = normalizeName(petName);
+      if (n !== 'pixiu' || Number(boardPetBefore.mana || 0) >= 4) {
+        queueNextTurnGold(getNextTurnGoldForTrigger(petName, petLevel, 'faint'));
+      }
+    }
+  }
   pushDebugTrigger('Faint', `Faint trigger at slot ${boardIdx + 1}.`, out);
 }
 
 function inferAilmentFromText(text) {
   const s = String(text || '').toLowerCase();
-  const ailments = ['weak', 'sleepy', 'spooked', 'dazed', 'toasty', 'crisp'];
+  const ailments = Object.keys(AILMENT_CANONICAL_NAMES);
   return ailments.find((a) => s.includes(a)) || '';
 }
 
@@ -3132,14 +3778,16 @@ function stockFoodInShop(food) {
     idx = state.extraShopFoods.findIndex((s) => !s.frozen);
   }
   if (idx < 0) idx = 0;
+  const discountedCost = Math.max(0, Math.max(0, food.cost ?? BUY_COST) - Number(state.foodDiscount || 0));
   state.extraShopFoods[idx].item = {
     name: food.name,
     tier: food.tier ?? 1,
     ability: food.ability ?? '',
-    path: resolveTexture(food.name),
-    cost: Math.max(0, food.cost ?? BUY_COST)
+    path: food.path || resolveTexture(food.name),
+    cost: discountedCost
   };
   state.extraShopFoods[idx].frozen = false;
+  markFoodSlotFx(state.extraShopFoods[idx], 'stock');
 }
 
 function getNearestAheadIndices(idx, count) {
@@ -3177,11 +3825,74 @@ function parseStockedApple(level) {
     };
   }
   return {
-    name: 'Apple',
-    fallback: null,
+    name: 'Gold Apple',
+    fallback: 'Apple',
     ability: 'Give one pet +1 attack and +1 health.',
     cost: 2
   };
+}
+
+function getWormStockFoodDefinition(level) {
+  const fallback = parseStockedApple(level);
+  const canonical = getTemplateFoodByName(fallback.name) || (fallback.fallback ? getTemplateFoodByName(fallback.fallback) : null);
+  return {
+    name: String(canonical?.name || fallback.name),
+    tier: Number(canonical?.tier || 2),
+    ability: String(canonical?.ability || fallback.ability || 'Give one pet +1 attack and +1 health.'),
+    cost: 2,
+    path: resolveTexture(canonical?.name || fallback.name || 'Apple')
+  };
+}
+
+function applyShopStartTurnEffectAt(idx, forcedName = null, forcedLevel = null) {
+  const pet = state.board[idx];
+  if (!pet) return [];
+  const logs = [];
+  const level = forcedLevel ?? getPetLevelInt(pet);
+  const n = normalizeName(forcedName || pet.name);
+
+  if (n === 'worm') {
+    const apple = getWormStockFoodDefinition(level);
+    for (let i = 0; i < 2; i += 1) {
+      stockFoodInShop({ ...apple });
+    }
+    logs.push(`${pet.name}: stocked 2 ${apple.name}`);
+    return logs;
+  }
+
+  if (n === 'squirrel') {
+    state.foodDiscount += level;
+    const applyDiscount = (slot) => {
+      if (!slot?.item) return;
+      slot.item.cost = Math.max(0, (slot.item.cost ?? BUY_COST) - level);
+      markFoodSlotFx(slot, 'discount', level);
+    };
+    state.shopFoods.forEach(applyDiscount);
+    state.extraShopFoods.forEach(applyDiscount);
+    logs.push(`${pet.name}: discounted shop food by ${level}`);
+    return logs;
+  }
+
+  return logs;
+}
+
+function replaceAllShopFoodsWithMilk() {
+  const milk = {
+    name: 'Milk',
+    tier: 5,
+    ability: 'Give one pet +1 attack and +2 health.',
+    cost: 0,
+    path: resolveTexture('Milk')
+  };
+  state.shopFoods.forEach((slot) => {
+    slot.item = { ...milk };
+    slot.frozen = false;
+    markFoodSlotFx(slot, 'stock');
+  });
+  state.extraShopFoods.forEach((slot) => {
+    slot.item = null;
+    slot.frozen = false;
+  });
 }
 
 function setParrotCopyFromAhead(parrotIdx, parrotLevel) {
@@ -3217,15 +3928,7 @@ function executeStartOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
   }
 
   if (n === 'worm') {
-    const apple = parseStockedApple(level);
-    const canonical = getTemplateFoodByName(apple.name) || (apple.fallback ? getTemplateFoodByName(apple.fallback) : null);
-    stockFoodInShop({
-      name: canonical?.name || apple.name,
-      tier: canonical?.tier ?? 2,
-      ability: canonical?.ability || apple.ability,
-      cost: apple.cost
-    });
-    logs.push(`${pet.name}: stocked ${canonical?.name || apple.name}`);
+    logs.push(...applyShopStartTurnEffectAt(idx, forcedName, forcedLevel));
     return logs;
   }
 
@@ -3245,12 +3948,7 @@ function executeStartOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
   }
 
   if (n === 'squirrel') {
-    state.foodDiscount += level;
-    state.shopFoods.forEach((slot) => {
-      if (!slot.item) return;
-      slot.item.cost = Math.max(0, (slot.item.cost ?? BUY_COST) - level);
-    });
-    logs.push(`${pet.name}: discounted shop food by ${level}`);
+    logs.push(...applyShopStartTurnEffectAt(idx, forcedName, forcedLevel));
     return logs;
   }
 
@@ -3307,6 +4005,16 @@ function executeEndOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
     return logs;
   }
 
+  if (n === 'magpie') {
+    const spend = Math.max(0, Math.min(level, Number(state.gold || 0)));
+    if (spend > 0) {
+      state.gold = Math.max(0, Number(state.gold || 0) - spend);
+      queueNextTurnGold(spend);
+      logs.push(`${pet.name}: spent ${spend} gold and queued ${spend} for next turn`);
+    }
+    return logs;
+  }
+
   return logs;
 }
 
@@ -3355,7 +4063,32 @@ function runStartOfTurnPhase() {
   state.phase = 'start';
   state.foodDiscount = 0;
   if (useCalculatorShopBridge()) {
+    const preBridgeStartGold = Math.max(0, Number(state.gold || 0));
+    const expectedSwanGold = state.board.reduce((sum, pet) => {
+      if (!pet) return sum;
+      return normalizeName(pet.name) === 'swan' ? (sum + getPetLevelInt(pet)) : sum;
+    }, 0);
     const logs = triggerCalculatorStartTurn();
+    if (Number(state.gold || 0) < preBridgeStartGold) {
+      // Keep queued "next turn" gold from being overwritten by bridge sync.
+      state.gold = preBridgeStartGold;
+    }
+    const goldAfterBridge = Math.max(0, Number(state.gold || 0));
+    const missingSwanGold = Math.max(0, (preBridgeStartGold + expectedSwanGold) - goldAfterBridge);
+    if (missingSwanGold > 0) {
+      state.gold += missingSwanGold;
+      logs.push(`Swan: +${missingSwanGold} gold (bridge fallback)`);
+    }
+    const localShopLogs = [];
+    logRootCauseOnce(
+      'worm_squirrel_bridge',
+      'Worm/Squirrel/Swan StartTurn effects were bypassed in calculator bridge path because bridge sync updated board state without mutating local shop/gold state for all manual effects.'
+    );
+    for (let i = 0; i < BOARD_SIZE; i += 1) {
+      if (!state.board[i]) continue;
+      localShopLogs.push(...applyShopStartTurnEffectAt(i));
+    }
+    logs.push(...localShopLogs);
     state.phase = 'during';
     return logs;
   }
@@ -3431,12 +4164,19 @@ function triggerFriendSummonedAbilities(summonedIdx) {
 
 function triggerBuyAbility(pet, boardIdx) {
   if (!pet) return;
-  if (useCalculatorShopBridge()) {
-    triggerCalculatorBuy(boardIdx);
-    return;
-  }
   const n = normalizeName(pet.name);
   const lvl = getPetLevelInt(pet);
+  if (useCalculatorShopBridge()) {
+    triggerCalculatorBuy(boardIdx);
+    if (n === 'cow') {
+      logRootCauseOnce(
+        'cow_buy_bridge',
+        'Cow buy replacement only touched one main food slot in manual logic and was skipped entirely when calculator bridge handled buy triggers.'
+      );
+      replaceAllShopFoodsWithMilk();
+    }
+    return;
+  }
 
   if (n === 'otter') {
     const picks = randomIndices(getBoardPetIndices(boardIdx), Math.max(1, lvl));
@@ -3445,18 +4185,11 @@ function triggerBuyAbility(pet, boardIdx) {
   }
 
   if (n === 'cow') {
-    const milk = {
-      name: 'Milk',
-      tier: 5,
-      ability: 'Give one pet +1 attack and +2 health.',
-      cost: 0
-    };
-    state.shopFoods[0].item = {
-      ...milk,
-      path: resolveTexture(milk.name)
-    };
-    state.shopFoods[0].frozen = false;
-    stockFoodInShop(milk);
+    logRootCauseOnce(
+      'cow_buy_manual',
+      'Cow buy replacement only wrote slot 0 and stocked one extra food, leaving other shop-food slots unchanged after expansion.'
+    );
+    replaceAllShopFoodsWithMilk();
   }
 
   maybeChooseToyFromPetAbility(pet, lvl, {
@@ -3483,37 +4216,70 @@ function triggerSellAbility(pet, sourceIdx = -1) {
   };
   const lvl = getPetLevelInt(pet);
   const abilityText = getPetAbilityText(pet, lvl);
+  const immediateSellGold = getImmediateGoldForTrigger(pet?.name || '', lvl, 'sell');
   const chipmunkCopyCount = parseStockCopyCountFromAbility(abilityText, lvl);
+  const applyDuckShopHealthBuff = () => {
+    state.shopPets.forEach((slot) => {
+      if (slot.item) slot.item.baseHealth = Math.max(1, (slot.item.baseHealth || 1) + lvl);
+    });
+    const buffPending = (pending) => {
+      if (!pending || !Array.isArray(pending.options)) return;
+      pending.options.forEach((opt) => {
+        if (opt?.item) {
+          opt.item.baseHealth = Math.max(1, Number(opt.item.baseHealth || 1) + lvl);
+        }
+      });
+    };
+    buffPending(state.pendingTierUp);
+    (state.pendingTierUpQueue || []).forEach(buffPending);
+  };
+  const stockPigeonFood = () => {
+    const copies = parseCountWord((abilityText.match(/Stock\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+free/i) || [])[1]) || lvl;
+    for (let i = 0; i < Math.max(1, copies); i += 1) {
+      stockFoodInShop({
+        name: 'Bread Crumbs',
+        tier: 1,
+        ability: 'Give one pet +1 attack.',
+        cost: 0
+      });
+    }
+  };
   if (useCalculatorShopBridge()) {
+    const preSellGold = Math.max(0, Number(state.gold || 0));
     triggerCalculatorSell(sourceIdx);
     if (normalizeName(pet?.name) === 'chipmunk') {
       stockPerkCopies(chipmunkCopyCount);
     }
     if (normalizeName(pet?.name) === 'duck') {
-      state.shopPets.forEach((slot) => {
-        if (slot.item) slot.item.baseHealth = Math.max(1, (slot.item.baseHealth || 1) + lvl);
-      });
+      applyDuckShopHealthBuff();
     }
+    if (normalizeName(pet?.name) === 'pigeon') {
+      stockPigeonFood();
+    }
+    if (immediateSellGold > 0 && Number(state.gold || 0) < (preSellGold + immediateSellGold)) {
+      state.gold = preSellGold + immediateSellGold;
+    }
+    queueNextTurnGold(getNextTurnGoldForTrigger(pet?.name || '', lvl, 'sell'));
     return;
   }
   const n = normalizeName(pet.name);
   if (n === 'beaver') {
     randomIndices(getBoardPetIndices(), 2).forEach((idx) => buffPetAt(idx, lvl, 0, { fromIdx: sourceIdx }));
   } else if (n === 'duck') {
-    state.shopPets.forEach((slot) => {
-      if (slot.item) slot.item.baseHealth = Math.max(1, (slot.item.baseHealth || 1) + lvl);
-    });
+    applyDuckShopHealthBuff();
   } else if (n === 'pig') {
     state.gold += lvl;
   } else if (n === 'pigeon') {
-    stockFoodInShop({
-      name: 'Bread Crumbs',
-      tier: 1,
-      ability: 'Summon one 1/1 Chick.'
-    });
+    stockPigeonFood();
   } else if (n === 'chipmunk') {
     stockPerkCopies(chipmunkCopyCount);
+  } else if (n === 'chinchilla') {
+    placeSummonedPet(makeTokenPet('Loyal Chinchilla', 2 * lvl, 2 * lvl, 1));
   }
+  if (immediateSellGold > 0) {
+    state.gold += immediateSellGold;
+  }
+  queueNextTurnGold(getNextTurnGoldForTrigger(pet?.name || '', lvl, 'sell'));
 
   maybeChooseToyFromPetAbility(pet, lvl, {
     trigger: 'sell',
@@ -3565,6 +4331,12 @@ function triggerFaintAbility(pet, soldIdx) {
     placeSummonedPet(makeTokenPet('Chick', atk, 1, 1));
   } else if (n === 'mammoth') {
     getBoardPetIndices().forEach((idx) => buffPetAt(idx, 2 * lvl, 2 * lvl, { fromIdx: soldIdx }));
+  } else if (n === 'weasel') {
+    queueNextTurnGold(lvl);
+  } else if (n === 'pixiu') {
+    if (Number(pet.mana || 0) >= 4) {
+      queueNextTurnGold(3 * lvl);
+    }
   }
 }
 
@@ -3572,6 +4344,11 @@ function getManualPerkSellBonus(pet) {
   const perkKey = normalizePerkNameKey(getPetPerkName(pet));
   if (perkKey === 'rice') return 2;
   return 0;
+}
+
+function getSellGoldForPet(pet) {
+  const lvl = Math.max(1, Math.min(3, Number(getPetLevelInt(pet) || 1)));
+  return Math.max(SELL_VALUE, lvl);
 }
 
 function sellPetAtIndex(idx) {
@@ -3584,7 +4361,7 @@ function sellPetAtIndex(idx) {
   playUiSound('click', 0.7);
   let goldGained = 0;
   if (useCalculatorShopBridge()) {
-    goldGained = Math.max(1, Number(pet.sellValue || SELL_VALUE));
+    goldGained = getSellGoldForPet(pet) + getManualPerkSellBonus(pet);
     state.gold += goldGained;
     triggerSellAbility(pet, idx);
     if (state.board[idx] === pet) {
@@ -3592,7 +4369,7 @@ function sellPetAtIndex(idx) {
     }
   } else {
     state.board[idx] = null;
-    goldGained = SELL_VALUE + getManualPerkSellBonus(pet);
+    goldGained = getSellGoldForPet(pet) + getManualPerkSellBonus(pet);
     state.gold += goldGained;
     triggerSellAbility(pet, idx);
     triggerFaintAbility(pet, idx);
@@ -3660,39 +4437,62 @@ function resetSelection() {
 }
 
 function maybeQueueTierUpReward(previousLevelInt, newLevelInt) {
-  if (newLevelInt <= previousLevelInt) return;
+  if (newLevelInt <= previousLevelInt) return 0;
 
-  const rewardTier = maxTierForTurn(state.turn) + 1;
-  if (rewardTier > 6) {
-    setStatus(`Pet leveled up to ${newLevelInt}, but no higher tier is available.`);
-    return;
+  const rewardTier = Math.min(6, maxTierForTurn(state.turn) + 1);
+  if (rewardTier === 6 && maxTierForTurn(state.turn) >= 6) {
+    logRootCauseOnce(
+      'tier6_reward',
+      'Tier-up reward tier was computed as maxTierForTurn + 1, which became 7 on tier-6 turns and incorrectly skipped reward generation.'
+    );
   }
 
   const pack = state.packs[String(state.currentPackId)];
-  if (!pack) return;
+  if (!pack) return 0;
 
   const rewardPool = (pack.pets || []).filter((p) => p.tier === rewardTier);
   if (!rewardPool.length) {
     setStatus(`Pet leveled up to ${newLevelInt}, but no tier ${rewardTier} pool exists in this pack.`);
-    return;
+    return 0;
   }
 
+  const buildDistinctOptions = () => {
+    const byName = new Map();
+    rewardPool.forEach((candidate) => {
+      const key = normalizeName(candidate?.name || '');
+      if (!key || byName.has(key)) return;
+      byName.set(key, candidate);
+    });
+    const picks = pickN(Array.from(byName.values()), 2);
+    return picks.map((base) => ({
+      item: {
+        ...base,
+        baseAttack: Math.max(1, Number(base.baseAttack || 1) + Number(state.cannedShopPetAtkBuff || 0)),
+        baseHealth: Math.max(1, Number(base.baseHealth || 1) + Number(state.cannedShopPetHpBuff || 0))
+      },
+      frozen: false
+    }));
+  };
+
+  let queuedCount = 0;
   const count = newLevelInt - previousLevelInt;
   for (let i = 0; i < count; i += 1) {
     playUiSound('levelup', 0.9);
-    const picks = pickN(rewardPool, 2);
-    if (!picks.length) continue;
-    const options = picks.map((pet) => ({ item: pet, frozen: false }));
+    const options = buildDistinctOptions();
+    if (!options.length) continue;
     state.pendingTierUpQueue.push({
       rewardTier,
       options
     });
+    queuedCount += 1;
   }
 
   if (!state.pendingTierUp && state.pendingTierUpQueue.length > 0) {
     state.pendingTierUp = state.pendingTierUpQueue.shift();
     renderTierUpInline();
+    animateTierUpRewardCue();
   }
+  return queuedCount;
 }
 
 function combineBoardPets(sourceIdx, targetIdx) {
@@ -3716,14 +4516,19 @@ function combineBoardPets(sourceIdx, targetIdx) {
 
   const gainedExp = getExpFromPet(source) + 1;
   const bumped = bumpPetLevelByExp(target, gainedExp);
+  const merged = mergeStackedPetStats(bumped.pet, target, source);
 
-  state.board[targetIdx] = bumped.pet;
+  state.board[targetIdx] = merged;
   state.board[sourceIdx] = null;
   resetSelection();
   renderBoard();
 
-  setStatus(`${bumped.pet.name} stacked to level ${bumped.pet.levelValue}.`);
+  setStatus(`${merged.name} stacked to level ${merged.levelValue}.`);
   maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt);
+  applyLuckyCatLevelUpNextTurnGold(merged, bumped.prevLevelInt, bumped.newLevelInt);
+  if (bumped.newLevelInt > bumped.prevLevelInt) {
+    animateLevelUpAt('shop', targetIdx);
+  }
   if (useCalculatorShopBridge() && bumped.newLevelInt > bumped.prevLevelInt) {
     triggerCalculatorLevelUp(targetIdx);
   }
@@ -3821,7 +4626,8 @@ function tryBuyShopPetToBoard(shopIdx, boardIdx) {
   }
   const gainedExp = getExpFromPet(shopPet) + 1;
   const bumped = bumpPetLevelByExp(boardPet, gainedExp);
-  state.board[boardIdx] = bumped.pet;
+  const merged = mergeStackedPetStats(bumped.pet, boardPet, shopPet);
+  state.board[boardIdx] = merged;
   triggerBuyAbility(shopPet, boardIdx);
   slot.item = null;
   slot.frozen = false;
@@ -3830,8 +4636,12 @@ function tryBuyShopPetToBoard(shopIdx, boardIdx) {
   renderShopPets();
   renderShopFoods();
   playPetBuySound(shopPet.name);
-  setStatus(`Bought and stacked ${shopPet.name} to level ${bumped.pet.levelValue}.`);
+  setStatus(`Bought and stacked ${shopPet.name} to level ${merged.levelValue}.`);
   maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt);
+  applyLuckyCatLevelUpNextTurnGold(merged, bumped.prevLevelInt, bumped.newLevelInt);
+  if (bumped.newLevelInt > bumped.prevLevelInt) {
+    animateLevelUpAt('shop', boardIdx);
+  }
   if (useCalculatorShopBridge() && bumped.newLevelInt > bumped.prevLevelInt) {
     triggerCalculatorLevelUp(boardIdx);
   }
@@ -3871,6 +4681,11 @@ function tryFeedFoodToBoard(listName, foodIdx, boardIdx) {
   if (useCalculatorShopBridge()) {
     triggerCalculatorSpendGold(cost);
   }
+  const manaGainMatch = String(food?.ability || '').match(/Give one pet \+(\d+) mana/i);
+  const manaGain = Math.max(0, Number(manaGainMatch?.[1] || 0));
+  const preMana = Number.isInteger(resolvedBoardIdx) && resolvedBoardIdx >= 0
+    ? Math.max(0, Number(state.board[resolvedBoardIdx]?.mana || 0))
+    : 0;
   const applied = applyFoodToBoardPet(food, resolvedBoardIdx, foodRef);
   if (!applied.ok) {
     state.gold += cost;
@@ -3881,6 +4696,10 @@ function tryFeedFoodToBoard(listName, foodIdx, boardIdx) {
   removeFoodFromSlot(foodRef);
   if (useCalculatorShopBridge() && Number.isInteger(resolvedBoardIdx) && resolvedBoardIdx >= 0) {
     triggerCalculatorFoodEaten(resolvedBoardIdx, food.name);
+    if (manaGain > 0 && state.board[resolvedBoardIdx]) {
+      const expected = preMana + manaGain;
+      state.board[resolvedBoardIdx].mana = Math.max(expected, Number(state.board[resolvedBoardIdx].mana || 0));
+    }
   }
   updateHud();
   renderBoard();
@@ -3965,6 +4784,9 @@ function renderBoard() {
     }
 
     if (!pet) {
+      if (Array.isArray(state.shopAilmentBySlot)) {
+        state.shopAilmentBySlot[idx] = '';
+      }
       const empty = document.createElement('div');
       empty.className = 'name';
       empty.textContent = `Empty (${idx + 1})`;
@@ -3988,13 +4810,33 @@ function renderBoard() {
     levelText.className = 'level-text';
     levelText.textContent = `Level ${formatLevelValue(pet.levelValue ?? getLevelDisplayForExp(pet.exp ?? 0))}`;
     const perkName = getPetPerkName(pet);
+    const ailmentName = getPetAilmentName(pet);
     const perkBadge = createPerkBadgeElement(perkName);
+    const ailmentBadge = createAilmentBadgeElement(ailmentName);
+    const effectsRow = document.createElement('div');
+    effectsRow.className = 'battle-effects-row shop-effects-row';
+    const prevAilment = String(state.shopAilmentBySlot?.[idx] || '');
+    if (Array.isArray(state.shopAilmentBySlot)) {
+      state.shopAilmentBySlot[idx] = ailmentName;
+    }
+    if (perkBadge) effectsRow.appendChild(perkBadge);
+    if (ailmentBadge && ailmentName && ailmentName !== prevAilment) {
+      ailmentBadge.classList.add('ailment-pop');
+    }
+    if (!ailmentName && prevAilment) {
+      const removed = createAilmentBadgeElement(prevAilment);
+      if (removed) {
+        removed.classList.add('ailment-remove');
+        effectsRow.appendChild(removed);
+      }
+    }
+    if (ailmentBadge) effectsRow.appendChild(ailmentBadge);
 
     const actions = document.createElement('div');
     actions.className = 'actions';
 
     const sellBtn = document.createElement('button');
-    sellBtn.textContent = '+1 Sell';
+    sellBtn.textContent = `+${getSellGoldForPet(pet) + getManualPerkSellBonus(pet)} Sell`;
     sellBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
       sellPetAtIndex(idx);
@@ -4002,9 +4844,11 @@ function renderBoard() {
 
     actions.appendChild(sellBtn);
     el.appendChild(media);
+    if (effectsRow.children.length > 0) el.appendChild(effectsRow);
+    const manaBadge = createManaBadgeElement(Math.max(0, Number(pet.mana || 0)));
+    if (manaBadge) el.appendChild(manaBadge);
     el.appendChild(statsText);
     el.appendChild(levelText);
-    if (perkBadge) el.appendChild(perkBadge);
     el.appendChild(actions);
     el.addEventListener('click', () => onBoardSlotClick(idx));
     bindBoardDrop(el, idx);
@@ -4037,6 +4881,7 @@ function sortEntriesByUiFilter(entries, type = 'pet') {
 }
 
 function renderShopPets() {
+  updateShopGridLayout();
   petSlots.innerHTML = '';
   const entries = sortEntriesByUiFilter(
     state.shopPets
@@ -4107,6 +4952,7 @@ function renderShopPets() {
 }
 
 function renderShopFoods() {
+  updateShopGridLayout();
   foodSlots.innerHTML = '';
   if (extraFoodSlots) extraFoodSlots.innerHTML = '';
 
@@ -4139,6 +4985,15 @@ function renderShopFoods() {
         toggleFreezeFoodSlot(idx);
       }
     });
+
+    const now = Date.now();
+    const stockPop = Number(slot.stockPulseUntil || 0) > now;
+    const discountPop = Number(slot.discountPulseUntil || 0) > now;
+    if (stockPop) el.classList.add('stock-pop');
+    if (discountPop) {
+      el.classList.add('food-discounted');
+      el.dataset.discount = `-${Math.max(1, Number(slot.discountAmount || 1))}`;
+    }
 
     renderFrozenChip(el, slot.frozen);
 
@@ -4212,7 +5067,8 @@ function applyTurnTierFilters() {
 }
 
 function refillShop(preserveFrozen = true) {
-  for (let i = 0; i < PET_SHOP_SIZE; i += 1) {
+  ensureShopSlotCounts();
+  for (let i = 0; i < state.shopPets.length; i += 1) {
     const slot = state.shopPets[i];
     if (preserveFrozen && slot.frozen && slot.item) continue;
     const picked = randFrom(state.currentPool.pets);
@@ -4229,7 +5085,7 @@ function refillShop(preserveFrozen = true) {
     }
   }
 
-  for (let i = 0; i < FOOD_SHOP_SIZE; i += 1) {
+  for (let i = 0; i < state.shopFoods.length; i += 1) {
     const slot = state.shopFoods[i];
     if (preserveFrozen && slot.frozen && slot.item) continue;
     const picked = randFrom(state.currentPool.foods);
@@ -4245,6 +5101,19 @@ function refillShop(preserveFrozen = true) {
   renderShopPets();
   renderShopFoods();
   animateShopRefresh();
+}
+
+function clearExtraShopFoodsOnRoll(preserveFrozen = true) {
+  if (!Array.isArray(state.extraShopFoods)) return;
+  for (let i = 0; i < state.extraShopFoods.length; i += 1) {
+    const slot = state.extraShopFoods[i];
+    if (preserveFrozen && slot.frozen && slot.item) continue;
+    slot.item = null;
+    slot.frozen = false;
+    if (!preserveFrozen) {
+      slot.frozen = false;
+    }
+  }
 }
 
 function renderTierUpInline() {
@@ -4330,10 +5199,33 @@ function rerollPendingTierUpOptions() {
   if (!pack) return;
   const rewardPool = (pack.pets || []).filter((p) => p.tier === rewardTier);
   if (!rewardPool.length) return;
+  const uniqueByName = new Map();
+  rewardPool.forEach((candidate) => {
+    const key = normalizeName(candidate?.name || '');
+    if (!key || uniqueByName.has(key)) return;
+    uniqueByName.set(key, candidate);
+  });
+  const available = Array.from(uniqueByName.values());
+  const lockedNames = new Set(
+    state.pendingTierUp.options
+      .filter((slot) => slot?.frozen && slot?.item)
+      .map((slot) => normalizeName(slot.item.name))
+  );
   state.pendingTierUp.options = state.pendingTierUp.options.map((slot) => {
     if (slot?.frozen && slot?.item) return slot;
+    const pool = available.filter((pet) => !lockedNames.has(normalizeName(pet.name)));
+    const pick = randFrom(pool);
+    if (pick) {
+      lockedNames.add(normalizeName(pick.name));
+    }
     return {
-      item: randFrom(rewardPool),
+      item: pick
+        ? {
+          ...pick,
+          baseAttack: Math.max(1, Number(pick.baseAttack || 1) + Number(state.cannedShopPetAtkBuff || 0)),
+          baseHealth: Math.max(1, Number(pick.baseHealth || 1) + Number(state.cannedShopPetHpBuff || 0))
+        }
+        : null,
       frozen: false
     };
   });
@@ -4426,6 +5318,11 @@ function switchPack(packId) {
   state.battleActive = { side: null, idx: -1 };
   state.toyModalFocusIndex = 0;
   state.debugTriggerLog = [];
+  state.shopAilmentBySlot = Array.from({ length: BOARD_SIZE }, () => '');
+  state.battleAilmentBySide = {
+    player: Array.from({ length: BOARD_SIZE }, () => ''),
+    opponent: Array.from({ length: BOARD_SIZE }, () => '')
+  };
   state.levelHistoryBySlot = Array.from({ length: BOARD_SIZE }, () => []);
   state.board = Array(BOARD_SIZE).fill(null);
   resetSelection();
@@ -4437,8 +5334,8 @@ function switchPack(packId) {
   clearTooltip();
   renderTierUpInline();
 
-  state.shopPets = Array.from({ length: PET_SHOP_SIZE }, () => ({ item: null, frozen: false }));
-  state.shopFoods = Array.from({ length: FOOD_SHOP_SIZE }, () => ({ item: null, frozen: false }));
+  state.shopPets = Array.from({ length: getPetShopSizeForTurn(1) }, () => ({ item: null, frozen: false }));
+  state.shopFoods = Array.from({ length: getFoodShopSizeForTurn(1) }, () => ({ item: null, frozen: false }));
   state.extraShopFoods = Array.from({ length: EXTRA_FOOD_SHOP_SIZE }, () => ({ item: null, frozen: false }));
 
   applyTurnTierFilters();
@@ -4475,6 +5372,17 @@ function switchPack(packId) {
 }
 
 function rollShop() {
+  const now = Date.now();
+  if ((now - Number(state.lastRollInputAt || 0)) < 120) {
+    return;
+  }
+  state.lastRollInputAt = now;
+  if (state.rollActionLocked) {
+    return;
+  }
+  state.rollActionLocked = true;
+  updateRollButtonState();
+  try {
   if (isUiModalBlocking()) {
     setStatus('Resolve toy modal selection first.');
     return;
@@ -4491,13 +5399,18 @@ function rollShop() {
       triggerCalculatorSpendGold(ROLL_COST);
       triggerCalculatorRoll();
     }
+    clearExtraShopFoodsOnRoll(true);
     const claimed = claimFrozenTierUpOptions();
     if (claimed > 0) {
+      renderShopFoods();
+      animateShopRefresh();
       updateHud();
       setStatus(`Claimed ${claimed} frozen tier-up pet${claimed > 1 ? 's' : ''} into the pet shop. Other tier-up options were removed.`);
       return;
     }
     rerollPendingTierUpOptions();
+    renderShopFoods();
+    animateShopRefresh();
     updateHud();
     return;
   }
@@ -4518,9 +5431,14 @@ function rollShop() {
     triggerCalculatorSpendGold(ROLL_COST);
     triggerCalculatorRoll();
   }
+  clearExtraShopFoodsOnRoll(true);
   refillShop(true);
   updateHud();
   setStatus('Rolled new pets and food. Frozen slots stayed in place.');
+  } finally {
+    state.rollActionLocked = false;
+    updateRollButtonState();
+  }
 }
 
 async function endTurn() {
@@ -4543,6 +5461,10 @@ async function endTurn() {
     const activeCount = state.board.filter(Boolean).length;
     if (activeCount > 0) {
       const report = simulateBattleOnce();
+      const queuedFromBattle = queueBattleNextTurnGoldFromReport(report);
+      if (queuedFromBattle > 0) {
+        pushDebugTrigger('BattleNextTurnGold', `Queued ${queuedFromBattle} gold from battle next-turn triggers.`);
+      }
       await playBattleScene(report);
       battleLabel = report.winner === 'player' ? 'Win' : report.winner === 'opponent' ? 'Loss' : 'Draw';
     } else {
@@ -4619,6 +5541,7 @@ function hydratePackData(packData) {
       })),
       foods: foods.map((f) => ({
         ...f,
+        cost: normalizeName(f.name) === 'sleepingpill' ? 1 : f.cost,
         path: resolveTexture(f.name)
       }))
     };
@@ -4729,12 +5652,18 @@ endTurnBtn.addEventListener('click', endTurn);
 tierUpSkipBtn.addEventListener('click', skipTierUpReward);
 window.addEventListener('scroll', clearTooltip, true);
 window.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') {
+    if (state.toyModalOpen) {
+      closeToyPickerModal();
+      return;
+    }
+    if (state.battleReportModalOpen) {
+      closeBattleReportModal();
+      return;
+    }
+  }
   if (!state.toyModalOpen) return;
   const choices = Array.isArray(state.toyChoices) ? state.toyChoices : [];
-  if (ev.key === 'Escape') {
-    closeToyPickerModal();
-    return;
-  }
   if (!choices.length) return;
   if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') {
     ev.preventDefault();
@@ -4766,6 +5695,22 @@ if (toyPickerModal) {
   toyPickerModal.addEventListener('click', (ev) => {
     if (ev.target === toyPickerModal) {
       closeToyPickerModal();
+    }
+  });
+}
+if (battleReportBtn) {
+  battleReportBtn.addEventListener('click', () => {
+    playUiSound('click', 0.7);
+    openBattleReportModal();
+  });
+}
+if (battleReportCloseBtn) {
+  battleReportCloseBtn.addEventListener('click', closeBattleReportModal);
+}
+if (battleReportModal) {
+  battleReportModal.addEventListener('click', (ev) => {
+    if (ev.target === battleReportModal) {
+      closeBattleReportModal();
     }
   });
 }
