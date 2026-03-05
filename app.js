@@ -1,4 +1,4 @@
-﻿const START_GOLD = 10;
+const START_GOLD = 10;
 const BUY_COST = 3;
 const TIER_UP_COST = 3;
 const ROLL_COST = 1;
@@ -132,6 +132,10 @@ const DEFAULT_PERK_NOTES = {
   skewer: 'Also attack second and third enemies for 3 damage.'
 };
 
+const SHOP_PERK_GAIN_EFFECTS = {
+  blackberry: { atk: 1, hp: 2 }
+};
+
 const PERK_CANONICAL_NAMES = {
   meatbone: 'Meat Bone',
   riceball: 'Rice',
@@ -228,7 +232,9 @@ const TOY_DEFINITIONS = [
   { name: 'Excalibur', tier: '1-3', effect: 'End turn: Back-most friend gains scaling stats for 30 turns.', sourcePet: 'Questing Beast', pack: 'Unicorn Pack' },
   { name: 'Holy Grail', tier: '1-3', effect: 'Break: Summon free Holy Water (1-3).', sourcePet: 'Questing Beast', pack: 'Unicorn Pack' },
   { name: 'Microwave Oven', tier: '1-3', effect: 'Start of battle: Give Popcorn perk to front-most perkless friends.', sourcePet: 'Vervet', pack: 'Golden Pack' },
-  { name: 'Witch Broom', tier: '1-3', effect: 'Start of battle: Make random perk-less enemies Weak (scales with level).', sourcePet: 'Cuddle Toad', pack: 'Unicorn Pack' }
+  { name: 'Crystal Ball', tier: '1-3', effect: 'Start of battle: Give all pets random perks and ailments.', sourcePet: 'Cuddle Toad', pack: 'Unicorn Pack' },
+  { name: 'Witch Broom', tier: '1-3', effect: 'Start of battle: Make random perk-less enemies Weak (scales with level).', sourcePet: 'Cuddle Toad', pack: 'Unicorn Pack' },
+  { name: 'Magic Wand', tier: '1-3', effect: 'Empty front space: Summon Great One (scales damage by level).', sourcePet: 'Cuddle Toad', pack: 'Unicorn Pack' }
 ];
 
 const state = {
@@ -243,6 +249,7 @@ const state = {
   cannedShopPetHpBuff: 0,
   peachUpgradeBonus: 0,
   lastBattleLost: false,
+  trumpets: 0,
   board: Array(BOARD_SIZE).fill(null),
   boardSelectedIndex: null,
   shopPets: Array.from({ length: PET_SHOP_SIZE }, () => ({ item: null, frozen: false })),
@@ -290,12 +297,14 @@ const state = {
   rollTagFallbackUsed: false,
   level3SoldThisTurn: 0,
   summonedThisTurn: 0,
+  pendingOpponentDirtyRats: 0,
+  packTierByPack: {},
   nameIdAliases: {},
   perkNotes: { ...DEFAULT_PERK_NOTES },
   lastToySource: null,
   toyModalOpen: false,
   colorBlindMode: false,
-  uiScale: 1,
+  uiScale: 0.86,
   uiFilters: {
     sort: 'none',
     query: ''
@@ -309,8 +318,12 @@ const state = {
   debugRootCauseLogged: {},
   rollActionLocked: false,
   lastRollInputAt: 0,
+  hoverAnchorEl: null,
+  hoverFrameId: 0,
   shopAilmentBySlot: Array.from({ length: BOARD_SIZE }, () => ''),
   shopManaBySlot: Array.from({ length: BOARD_SIZE }, () => 0),
+  manaDecayRenderBySlot: Array.from({ length: BOARD_SIZE }, () => null),
+  manaDecayHighlightBySlot: Array.from({ length: BOARD_SIZE }, () => false),
   battleAilmentBySide: {
     player: Array.from({ length: BOARD_SIZE }, () => ''),
     opponent: Array.from({ length: BOARD_SIZE }, () => '')
@@ -391,6 +404,36 @@ const TOYS_BY_NAME = TOY_DEFINITIONS.reduce((acc, toy) => {
   acc[normalizeName(toy.name)] = toy;
   return acc;
 }, {});
+
+const TOY_COLLECTION_OVERRIDES = {
+  [normalizeName('witch toy')]: ['Crystal Ball', 'Witch Broom', 'Magic Wand'],
+  [normalizeName('Griffin')]: ['Winged Sandals', 'Treasure Map']
+};
+
+const TOY_SOURCE_RESTRICTIONS = {
+  [normalizeName('griffin')]: ['Winged Sandals', 'Treasure Map']
+};
+
+const TOKEN_PET_BLACKLIST = new Set([
+  'youngphoenix',
+  'youngpheonix',
+  'firepup',
+  'monty',
+  'greatone',
+  'crackedegg',
+  'goat',
+  'lion',
+  'gianteyesdog',
+  'giantdogeyes',
+  'rock',
+  'snake',
+  'smallerslime',
+  'dirtyrat',
+  'zombiecricket',
+  'bus',
+  'boat',
+  'head'
+]);
 
 function resolveTexture(name) {
   const raw = String(name || '').trim();
@@ -569,7 +612,11 @@ function ensureShopSlotCounts() {
     state.shopPets.push(...Array.from({ length: add }, () => ({ item: null, frozen: false })));
     animateShopExpansion('pet');
   } else if (state.shopPets.length > wantPets) {
-    state.shopPets = state.shopPets.slice(0, wantPets);
+    const extra = state.shopPets.slice(wantPets);
+    const hasOccupiedExtra = extra.some((slot) => Boolean(slot?.item));
+    if (!hasOccupiedExtra) {
+      state.shopPets = state.shopPets.slice(0, wantPets);
+    }
   }
   if (state.shopFoods.length < wantFoods) {
     const add = wantFoods - state.shopFoods.length;
@@ -589,6 +636,14 @@ function markFoodSlotFx(slot, fxKind, amount = 0) {
   } else if (fxKind === 'discount') {
     slot.discountPulseUntil = now + 900;
     slot.discountAmount = Math.max(0, Number(amount || 0));
+  }
+}
+
+function markPetSlotFx(slot, fxKind) {
+  if (!slot) return;
+  const now = Date.now();
+  if (fxKind === 'stock') {
+    slot.stockPulseUntil = now + 900;
   }
 }
 
@@ -801,6 +856,9 @@ function applyAccessibilitySettings() {
   const root = document.documentElement;
   if (root) {
     root.style.setProperty('--ui-scale', String(state.uiScale || 1));
+  }
+  if (uiZoomRange) {
+    uiZoomRange.value = String(Math.round(100 * Number(state.uiScale || 1)));
   }
   if (document.body) {
     document.body.classList.toggle('colorblind-mode', Boolean(state.colorBlindMode));
@@ -1096,32 +1154,6 @@ function animatePerkMentions(text, snapshot) {
   checkSide('opponent');
 }
 
-function animateAilmentMentions(text, snapshot) {
-  const ailment = inferAilmentFromText(text);
-  if (!ailment || !snapshot) return;
-  const label = getCanonicalAilmentName(ailment) || ailment.toUpperCase();
-  const lower = String(text || '').toLowerCase();
-  const checkSide = (side) => {
-    for (let i = 0; i < BOARD_SIZE; i += 1) {
-      const pet = snapshot?.[side]?.[i];
-      if (!pet?.name) continue;
-      const petName = String(pet.name).toLowerCase();
-      if (!petName || !lower.includes(petName)) continue;
-      const el = getBattleSlotElement(side, i);
-      if (!el) continue;
-      const badge = createAilmentBadgeElement(label);
-      if (badge) {
-        badge.classList.add('ailment-pop');
-        const row = el.querySelector('.battle-effects-row');
-        if (row) row.appendChild(badge);
-      }
-      spawnStatFloat(el, 'ailment', label.toUpperCase());
-    }
-  };
-  checkSide('player');
-  checkSide('opponent');
-}
-
 function animateBattleLevelMentions(text, snapshot) {
   if (!snapshot) return;
   const lower = String(text || '').toLowerCase();
@@ -1141,16 +1173,61 @@ function animateBattleLevelMentions(text, snapshot) {
 
 function pulseAbilityOnElement(el, label = 'Ability') {
   if (!el) return;
+  el.classList.remove('ability-activate-glow');
   el.classList.remove('ability-pulse');
   void el.offsetWidth;
+  el.classList.add('ability-activate-glow');
   el.classList.add('ability-pulse');
-  setTimeout(() => el.classList.remove('ability-pulse'), 440);
+  setTimeout(() => el.classList.remove('ability-activate-glow'), 400);
+  setTimeout(() => el.classList.remove('ability-pulse'), 400);
   spawnStatFloat(el, 'perk', label);
+}
+
+function parseAbilityTriggerLimit(abilityText, fallback = 1) {
+  const text = String(abilityText || '').trim();
+  if (!text) return Math.max(1, Number(fallback || 1));
+  const m = text.match(/Works?\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+times?\s+per\s+turn/i);
+  if (!m) return Math.max(1, Number(fallback || 1));
+  const token = String(m[1] || '').toLowerCase();
+  const words = {
+    one: 1, two: 2, three: 3, four: 4, five: 5,
+    six: 6, seven: 7, eight: 8, nine: 9, ten: 10
+  };
+  const n = /^\d+$/.test(token) ? Number(token) : (words[token] || Number(fallback || 1));
+  return Math.max(1, Number.isFinite(n) ? n : Math.max(1, Number(fallback || 1)));
+}
+
+function tryConsumeAbilityTrigger(pet, abilityText, level = 1) {
+  if (!pet) return true;
+  pet.abilityTriggersThisTurn = Math.max(0, Number(pet.abilityTriggersThisTurn || 0));
+  const parsedLimit = parseAbilityTriggerLimit(abilityText, level);
+  pet.abilityTriggerLimit = Math.max(1, Number(parsedLimit || level || 1));
+  if (pet.abilityTriggersThisTurn >= pet.abilityTriggerLimit) return false;
+  pet.abilityTriggersThisTurn += 1;
+  return true;
+}
+
+function activatePetAbility({
+  scope = 'shop',
+  side = 'player',
+  idx = -1,
+  label = 'Ability',
+  pet = null,
+  abilityText = '',
+  level = 1
+} = {}) {
+  if (pet && !tryConsumeAbilityTrigger(pet, abilityText, level)) return false;
+  const el = scope === 'battle'
+    ? getBattleSlotElement(side, idx)
+    : getBoardSlotElement(idx);
+  pulseAbilityOnElement(el, label);
+  return true;
 }
 
 function pulseShopAbilityAt(idx, label) {
   const el = getBoardSlotElement(idx);
   pulseAbilityOnElement(el, label);
+  return true;
 }
 
 function animateShopXpFillAt(idx) {
@@ -1304,12 +1381,14 @@ function extractBattleSnapshot(rawMessage) {
       if (!Number.isInteger(slotNum) || slotNum < 1 || slotNum > BOARD_SIZE) continue;
       const parsedName = String(m[2] || '').trim();
       const parsed = parseBattleNameAndPerk(parsedName);
+      const status = normalizeStatusName(parsed.ailmentName || parsed.perkName || '');
       out[slotNum - 1] = {
         name: parsed.displayName,
         attack: Number(m[3]),
         health: Number(m[4]),
-        equipment: parsed.perkName || null,
-        ailment: parsed.ailmentName || '',
+        status: status || null,
+        equipment: status || null,
+        ailment: '',
         path: resolveTexture(parsed.displayName)
       };
     }
@@ -1380,15 +1459,17 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
     const levelBadge = document.createElement('div');
     levelBadge.className = 'battle-level-badge';
     levelBadge.textContent = `L${Math.max(1, Number(initial?.level || initial?.levelInt || derivedLevel || 1))}`;
-    const perkName = getCanonicalPerkName(
-      typeof pet.equipment === 'string'
-        ? pet.equipment
-        : (pet.equipment?.name || (typeof initial?.equipment === 'string' ? initial.equipment : (initial?.equipment?.name || '')))
-    );
-    const ailmentName = getCanonicalAilmentName(
-      pet.ailment
+    const statusName = normalizeStatusName(
+      pet.status
       || (typeof pet.equipment === 'string' ? pet.equipment : (pet.equipment?.name || ''))
+      || (typeof initial?.status === 'string' ? initial.status : '')
+      || (typeof initial?.equipment === 'string' ? initial.equipment : (initial?.equipment?.name || ''))
+      || pet.ailment
     );
+    const perkFromEquipment = getCanonicalPerkName(statusName);
+    const ailmentFromEquipment = getCanonicalAilmentName(statusName);
+    const ailmentName = ailmentFromEquipment || '';
+    const perkName = ailmentName ? '' : (perkFromEquipment || '');
     const perkBadge = createPerkBadgeElement(perkName);
     const ailmentBadge = createAilmentBadgeElement(ailmentName);
     const effectsRow = document.createElement('div');
@@ -1400,13 +1481,6 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
     state.battleAilmentBySide[side][i] = ailmentName;
     if (ailmentBadge && ailmentName && ailmentName !== prevAilment) {
       ailmentBadge.classList.add('ailment-pop');
-    }
-    if (!ailmentName && prevAilment) {
-      const cleared = createAilmentBadgeElement(prevAilment);
-      if (cleared) {
-        cleared.classList.add('ailment-remove');
-        effectsRow.appendChild(cleared);
-      }
     }
     if (perkBadge) effectsRow.appendChild(perkBadge);
     if (ailmentBadge) effectsRow.appendChild(ailmentBadge);
@@ -1451,7 +1525,9 @@ function renderBattleSceneSlots(container, slots, side = 'player', report = null
       levelInt: Math.max(1, Number(initial?.level || initial?.levelInt || 1)),
       levelValue: Math.max(1, Number(initial?.level || initial?.levelInt || derivedLevel || 1)),
       ability: initial?.ability || null,
-      equipment: perkName || ''
+      status: statusName || null,
+      equipment: statusName || null,
+      ailment: ''
     };
     bindHoverTooltip(el, 'pet', hoverPet);
     if (state.battleActive.side === side && state.battleActive.idx === i) {
@@ -1593,6 +1669,85 @@ function tryTriggerGeckoToyBreakFromFaintLog(text, snapshot) {
   return null;
 }
 
+function updateBattleSnapshotEquipmentFromLog(text, snapshot) {
+  if (!snapshot) return false;
+  const raw = String(text || '').trim();
+  if (!raw) return false;
+  let changed = false;
+  const getSideForName = (name) => {
+    const key = normalizeName(name);
+    if (!key) return '';
+    const playerIdx = findSnapshotPetIndexByName(snapshot?.player, name);
+    const opponentIdx = findSnapshotPetIndexByName(snapshot?.opponent, name);
+    if (playerIdx >= 0 && opponentIdx < 0) return 'player';
+    if (opponentIdx >= 0 && playerIdx < 0) return 'opponent';
+    if (playerIdx >= 0 && opponentIdx >= 0) {
+      const activeSide = state.battleActive?.side;
+      if (activeSide === 'player' || activeSide === 'opponent') {
+        const activeIdx = findSnapshotPetIndexByName(snapshot?.[activeSide], name);
+        if (activeIdx >= 0) return activeSide;
+      }
+      return 'player';
+    }
+    return '';
+  };
+  const setByName = (name, value, preferredSide = '') => {
+    const key = normalizeName(name);
+    if (!key) return;
+    const side = preferredSide || getSideForName(name);
+    if (!side) return;
+    for (let i = 0; i < BOARD_SIZE; i += 1) {
+      const pet = snapshot?.[side]?.[i];
+      if (!pet) continue;
+      if (normalizeName(pet.name) !== key) continue;
+      const nextStatus = normalizeStatusName(value || '');
+      const prevStatus = normalizeStatusName(pet.status || pet.equipment || pet.ailment || '');
+      if (normalizeName(prevStatus) === normalizeName(nextStatus)) return;
+      pet.status = nextStatus || null;
+      pet.equipment = nextStatus || null;
+      pet.ailment = '';
+      changed = true;
+      return;
+    }
+  };
+  const sourceName = String(raw.match(/^(.+?)\s+/)?.[1] || '').trim().replace(/[.]+$/, '');
+  const sourceSide = sourceName ? getSideForName(sourceName) : '';
+  const knownPerks = getKnownPerkNames().sort((a, b) => b.length - a.length);
+  let perkTargetName = '';
+  let perkGainedName = '';
+  for (const perk of knownPerks) {
+    const escaped = escapeRegex(perk);
+    const gaveRx = new RegExp(`^(.+?)\\s+gave\\s+(.+?)\\s+(?:the\\s+)?${escaped}(?:\\s+perk)?\\.?$`, 'i');
+    const gainedRx = new RegExp(`^(.+?)\\s+gained?\\s+(?:the\\s+)?${escaped}(?:\\s+perk)?\\.?$`, 'i');
+    const gave = raw.match(gaveRx);
+    const gained = raw.match(gainedRx);
+    if (gave) {
+      perkTargetName = String(gave[2] || '').trim().replace(/[.]+$/, '');
+      perkGainedName = perk;
+      break;
+    }
+    if (gained) {
+      perkTargetName = String(gained[1] || '').trim().replace(/[.]+$/, '');
+      perkGainedName = perk;
+      break;
+    }
+  }
+  if (perkTargetName && perkGainedName) {
+    const perkName = getCanonicalPerkName(perkGainedName);
+    if (perkName) setByName(perkTargetName, perkName, sourceSide);
+  }
+  const perkLost = raw.match(/^(.+?)\s+(?:lost|loses|used|uses|removed|consumed)\s+(?:the\s+)?([A-Za-z' -]+)(?:\s+perk)?\.?$/i)
+    || raw.match(/^(.+?)\s+perk\s+was\s+removed\b/i)
+    || raw.match(/^(.+?)\s+removed\s+its\s+perk\b/i);
+  if (perkLost) {
+    const targetName = String(perkLost[1] || '').trim().replace(/[.]+$/, '');
+    if (targetName) {
+      setByName(targetName, null, sourceSide);
+    }
+  }
+  return changed;
+}
+
 function showBattleScene(report) {
   if (!battleScreen) return;
   state.battlePlaybackSkip = false;
@@ -1621,7 +1776,7 @@ function showBattleScene(report) {
     const opponentToyLabel = report.opponentToyState?.toy_id
       ? `${report.opponentToyState.toy_id} x${Math.max(0, Number(report.opponentToyState.remaining_turns || 0))}`
       : 'None';
-    battleSceneStatus.textContent = `Toys: You ${playerToyLabel} / Opp ${opponentToyLabel} | Trumpets: You 0 / Opp 0 | Ailments: none`;
+    battleSceneStatus.textContent = `Toys: You ${playerToyLabel} / Opp ${opponentToyLabel} | Trumpets: You 0 / Opp 0`;
   }
   battleSceneEvent.textContent = 'Battle start';
   battleSceneLog.textContent = '';
@@ -1646,7 +1801,6 @@ async function playBattleScene(report) {
   const sceneLines = [];
   let playerTrumpets = 0;
   let opponentTrumpets = 0;
-  let lastAilment = '';
 
   const updateBattleStatusLine = () => {
     if (!battleSceneStatus) return;
@@ -1656,7 +1810,7 @@ async function playBattleScene(report) {
     const opponentToyLabel = report.opponentToyState?.toy_id
       ? `${report.opponentToyState.toy_id} x${Math.max(0, Number(report.opponentToyState.remaining_turns || 0))}`
       : 'None';
-    battleSceneStatus.textContent = `Toys: You ${playerToyLabel} / Opp ${opponentToyLabel} | Trumpets: You ${playerTrumpets} / Opp ${opponentTrumpets}${lastAilment ? ` | Ailment: ${lastAilment}` : ''}`;
+    battleSceneStatus.textContent = `Toys: You ${playerToyLabel} / Opp ${opponentToyLabel} | Trumpets: You ${playerTrumpets} / Opp ${opponentTrumpets}`;
   };
 
   for (let i = 0; i < logs.length; i += 1) {
@@ -1677,10 +1831,14 @@ async function playBattleScene(report) {
       battleSceneEvent.textContent = text;
       sceneLines.push(text);
       battleSceneLog.textContent = sceneLines.slice(-14).join('\n');
+      if (updateBattleSnapshotEquipmentFromLog(text, lastSnapshot)) {
+        renderBattleSceneSlots(battlePlayerSlots, lastSnapshot?.player || Array(BOARD_SIZE).fill(null), 'player', report);
+        renderBattleSceneSlots(battleOpponentSlots, lastSnapshot?.opponent || Array(BOARD_SIZE).fill(null), 'opponent', report);
+      }
       animateBattlePhaseCue(text, lastSnapshot);
       animateBattleClash(text, lastSnapshot);
+      pulseBattleAbilityFromLog(text, lastSnapshot, report);
       animatePerkMentions(text, lastSnapshot);
-      animateAilmentMentions(text, lastSnapshot);
       animateBattleLevelMentions(text, lastSnapshot);
 
       const gain = text.match(/gained?\s+(\d+)\s+trumpets?/i) || text.match(/gain(?:s)?\s+(\d+)\s+trumpets?/i);
@@ -1706,10 +1864,6 @@ async function playBattleScene(report) {
         } else if (ownerIdxOpp >= 0) {
           opponentTrumpets = Math.max(0, opponentTrumpets - amount);
         }
-      }
-      const ailment = inferAilmentFromText(text);
-      if (ailment) {
-        lastAilment = ailment.toUpperCase();
       }
       let manaUiChanged = false;
       const manaGive = text.match(/^(.+?) gave (.+?)\s+\+?(\d+)\s+mana\b/i)
@@ -1798,6 +1952,10 @@ function firstEmptyBoardSlot() {
 
 function firstEmptyShopPetSlot() {
   return state.shopPets.findIndex((x) => x.item === null);
+}
+
+function isTokenPetName(name = '') {
+  return TOKEN_PET_BLACKLIST.has(normalizeName(name));
 }
 
 function maxTierForTurn(turn) {
@@ -2293,20 +2451,55 @@ function dedupeToyChoices(choices = []) {
   return out;
 }
 
+function getToyChoicesFromNames(names = []) {
+  return dedupeToyChoices((Array.isArray(names) ? names : [])
+    .map((name) => TOYS_BY_NAME[normalizeName(name)])
+    .filter(Boolean)
+    .filter((toy) => isToyValidForPackAndTurn(toy.name, state.currentPackId, state.turn)));
+}
+
+function applyToySourceRestrictions(choices = [], sourceName = '') {
+  const key = normalizeName(sourceName);
+  const allowed = TOY_SOURCE_RESTRICTIONS[key] || null;
+  if (!allowed || !allowed.length) return dedupeToyChoices(choices);
+  const allowSet = new Set(allowed.map((name) => normalizeName(name)));
+  return dedupeToyChoices((Array.isArray(choices) ? choices : [])
+    .filter((toy) => allowSet.has(normalizeName(toy?.name || ''))));
+}
+
+function getToyCollectionKeyFromAbility(abilityText = '') {
+  const text = String(abilityText || '').trim();
+  if (!text) return '';
+  if (/witch toy/i.test(text)) return normalizeName('witch toy');
+  const fromCollection = text.match(/from\s+(.+?)'s\s+collection/i);
+  if (fromCollection) {
+    return normalizeName(fromCollection[1] || '');
+  }
+  return '';
+}
+
 function getAllowedToyChoicesForSource(sourcePetName, toyTier, abilityText = '') {
+  const collectionKey = getToyCollectionKeyFromAbility(abilityText);
+  const overrideNames = TOY_COLLECTION_OVERRIDES[collectionKey] || [];
+  const overridePool = applyToySourceRestrictions(getToyChoicesFromNames(overrideNames), sourcePetName);
+  if (overridePool.length) {
+    return overridePool;
+  }
+
   const sourceFromText = parseToySourceFromAbility(abilityText);
   const resolvedSource = sourceFromText || sourcePetName;
   const key = normalizeName(resolvedSource);
-  const pool = dedupeToyChoices((TOYS_BY_SOURCE[key] || [])
-    .filter((toy) => isToyValidForPackAndTurn(toy.name, state.currentPackId, state.turn)));
+  const pool = applyToySourceRestrictions(
+    dedupeToyChoices((TOYS_BY_SOURCE[key] || [])
+      .filter((toy) => isToyValidForPackAndTurn(toy.name, state.currentPackId, state.turn))),
+    resolvedSource
+  );
   if (!pool.length) {
-    const text = String(abilityText || '').trim();
-    if (/witch toy/i.test(text)) {
-      return dedupeToyChoices((TOYS_BY_SOURCE[normalizeName('Cuddle Toad')] || [])
-        .filter((toy) => isToyValidForPackAndTurn(toy.name, state.currentPackId, state.turn)));
-    }
     // Never show broad/random global toy pools when source mapping is missing.
     return [];
+  }
+  if (pool.length === 3) {
+    return pool;
   }
   const numericTier = Number(toyTier || 1);
   const exact = pool.filter((toy) => typeof toy.tier === 'number' && Number(toy.tier) === numericTier);
@@ -2389,10 +2582,16 @@ function hydrateLevelFields(pet, exp) {
 }
 
 function createBoardPetFromShopPet(shopPet) {
+  const initialStatus = normalizeStatusName(shopPet?.status || shopPet?.equipment || shopPet?.ailment || '');
   return hydrateLevelFields({
     ...shopPet,
     path: resolvePetTexture(shopPet?.name || '') || shopPet?.path || null,
     sellValue: Math.max(1, Number(shopPet?.sellValue || 1)),
+    abilityTriggersThisTurn: Math.max(0, Number(shopPet?.abilityTriggersThisTurn || 0)),
+    abilityTriggerLimit: Math.max(0, Number(shopPet?.abilityTriggerLimit || 0)),
+    status: initialStatus || null,
+    equipment: initialStatus || null,
+    ailment: '',
     tempBuffs: []
   }, 0);
 }
@@ -2599,12 +2798,33 @@ function getToyBreakAbilityKind(effectText = '') {
   if (!/^Break:/i.test(text)) return '';
   if (/^Break:\s*Give right-most friend\s+\+\d+\/\+\d+/i.test(text)) return 'right_most_friend_buff_scaled';
   if (/^Break:\s*Give all friends \+health/i.test(text)) return 'all_friends_health_scaled';
+  if (/^Break:\s*Give all friends \+attack and \+health/i.test(text)) return 'all_friends_attack_health_scaled';
   if (/^Break:\s*Stock free Lasagnas/i.test(text)) return 'stock_lasagna_scaled';
   if (/^Break:\s*Give right-most friends Melon perk/i.test(text)) return 'right_most_friends_melon_scaled';
   if (/^Break:\s*Summon a Treasure Chest/i.test(text)) return 'summon_treasure_chest';
   if (/^Break:\s*Stock free pet from Tier/i.test(text)) return 'stock_tier_pet_scaled';
   if (/^Break:\s*Summon free Holy Water/i.test(text)) return 'stock_holy_water_scaled';
   return '';
+}
+
+function parseToyBreakStatPair(effectText = '', fallback = 1) {
+  const text = String(effectText || '').trim();
+  const pair = text.match(/\+(\d+)\s*\/\s*\+(\d+)/i);
+  if (pair) {
+    return {
+      atk: Math.max(0, Number(pair[1] || fallback)),
+      hp: Math.max(0, Number(pair[2] || fallback))
+    };
+  }
+  const words = text.match(/\+(\d+)\s+attack.*\+(\d+)\s+health/i);
+  if (words) {
+    return {
+      atk: Math.max(0, Number(words[1] || fallback)),
+      hp: Math.max(0, Number(words[2] || fallback))
+    };
+  }
+  const base = Math.max(1, Number(fallback || 1));
+  return { atk: base, hp: base };
 }
 
 function getToyBreakMetadata(toyName = '') {
@@ -2646,17 +2866,25 @@ function executeToyBreakAbility(event) {
 
   const levelScale = Math.max(1, Math.min(3, toyLevel));
   if (meta.break_ability_kind === 'right_most_friend_buff_scaled') {
-    const base = Number((String(meta.effect || '').match(/\+(\d+)\/\+\d+/i) || [])[1] || 1);
+    const base = parseToyBreakStatPair(meta.effect, 1);
     const idx = getRightMostBoardPetIndices(1)[0];
     if (!Number.isInteger(idx)) return { ok: true, note: `${toyName}: no target friend for break buff.` };
-    const amount = Math.max(1, base * levelScale);
-    buffPetAt(idx, amount, amount, { perkText: `${toyName.toUpperCase()} BREAK` });
-    return { ok: true, note: `${toyName}: gave right-most friend +${amount}/+${amount}.` };
+    const atk = Math.max(1, Number(base.atk || 1) * levelScale);
+    const hp = Math.max(1, Number(base.hp || 1) * levelScale);
+    buffPetAt(idx, atk, hp, { perkText: `${toyName.toUpperCase()} BREAK` });
+    return { ok: true, note: `${toyName}: gave right-most friend +${atk}/+${hp}.` };
   }
   if (meta.break_ability_kind === 'all_friends_health_scaled') {
     const amount = levelScale;
     getBoardPetIndices().forEach((idx) => buffPetAt(idx, 0, amount, { perkText: `${toyName.toUpperCase()} BREAK` }));
     return { ok: true, note: `${toyName}: gave all friends +${amount} health.` };
+  }
+  if (meta.break_ability_kind === 'all_friends_attack_health_scaled') {
+    const base = parseToyBreakStatPair(meta.effect, 1);
+    const atk = Math.max(1, Number(base.atk || 1) * levelScale);
+    const hp = Math.max(1, Number(base.hp || 1) * levelScale);
+    getBoardPetIndices().forEach((idx) => buffPetAt(idx, atk, hp, { perkText: `${toyName.toUpperCase()} BREAK` }));
+    return { ok: true, note: `${toyName}: gave all friends +${atk}/+${hp}.` };
   }
   if (meta.break_ability_kind === 'stock_lasagna_scaled') {
     const lasagna = getTemplateFoodByName('Lasagna')
@@ -2684,23 +2912,29 @@ function executeToyBreakAbility(event) {
     return { ok: true, note: `${toyName}: summoned Treasure Chest.` };
   }
   if (meta.break_ability_kind === 'stock_tier_pet_scaled') {
-    const tiers = [2, 4, 6];
-    const tier = tiers[Math.max(0, Math.min(2, levelScale - 1))];
     const pack = state.packs[String(state.currentPackId)];
-    const pool = (pack?.pets || []).filter((p) => Number(p.tier || 1) === tier);
+    const tier = 2;
+    const pool = (pack?.pets || [])
+      .filter((p) => Number(p.tier || 1) === tier)
+      .filter((p) => !isTokenPetName(p?.name || ''));
     const pick = randFrom(pool);
     if (!pick) return { ok: false, note: `${toyName}: no tier ${tier} pet available to stock.` };
-    placeTierUpPetIntoShop({
+    const stockedPet = hydrateLevelFields({
       ...pick,
       baseAttack: Math.max(1, Number(pick.baseAttack || 1)),
       baseHealth: Math.max(1, Number(pick.baseHealth || 1))
-    });
-    return { ok: true, note: `${toyName}: stocked free tier ${tier} pet (${pick.name}).` };
+    }, calcExpForLevel(3));
+    stockPetInShopPreferEmptyOrBonus(stockedPet, { freeze: true });
+    return { ok: true, note: `${toyName}: stocked free L3 tier ${tier} pet (${pick.name}).` };
   }
   if (meta.break_ability_kind === 'stock_holy_water_scaled') {
     const holy = getTemplateFoodByName('Holy Water')
-      || getAllFoodsAcrossPacks().find((f) => normalizeName(f.name) === 'holywater');
-    if (!holy) return { ok: false, note: `${toyName}: Holy Water template missing.` };
+      || getAllFoodsAcrossPacks().find((f) => normalizeName(f.name) === 'holywater')
+      || {
+        name: 'Holy Water',
+        tier: 6,
+        ability: 'Give one pet +12 attack and +12 health.'
+      };
     for (let i = 0; i < levelScale; i += 1) {
       stockFoodInShop({
         name: holy.name,
@@ -2764,6 +2998,7 @@ function tooltipTextForToy(toy) {
 }
 
 function positionTooltip(event) {
+  if (state.hoverAnchorEl) return;
   const pad = 14;
   const width = hoverTooltip.offsetWidth || 260;
   const height = hoverTooltip.offsetHeight || 120;
@@ -2782,7 +3017,44 @@ function positionTooltip(event) {
   hoverTooltip.style.top = `${Math.max(8, top)}px`;
 }
 
+function positionTooltipFromAnchor() {
+  const anchorEl = state.hoverAnchorEl;
+  if (!anchorEl || hoverTooltip.classList.contains('hidden')) return;
+  const rect = anchorEl.getBoundingClientRect();
+  if (!rect || !Number.isFinite(rect.left)) return;
+  const pad = 10;
+  const width = hoverTooltip.offsetWidth || 260;
+  const height = hoverTooltip.offsetHeight || 120;
+  const anchorX = rect.left + (rect.width / 2);
+  let left = anchorX - (width / 2);
+  let top = rect.top - height - pad;
+  if (left < 8) left = 8;
+  if (left + width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - width - 8);
+  if (top < 8) top = rect.bottom + pad;
+  if (top + height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - height - 8);
+  hoverTooltip.style.left = `${left}px`;
+  hoverTooltip.style.top = `${top}px`;
+}
+
+function scheduleTooltipFollowFrame() {
+  if (state.hoverFrameId) cancelAnimationFrame(state.hoverFrameId);
+  const tick = () => {
+    if (hoverTooltip.classList.contains('hidden') || !state.hoverAnchorEl) {
+      state.hoverFrameId = 0;
+      return;
+    }
+    positionTooltipFromAnchor();
+    state.hoverFrameId = requestAnimationFrame(tick);
+  };
+  state.hoverFrameId = requestAnimationFrame(tick);
+}
+
 function clearTooltip() {
+  state.hoverAnchorEl = null;
+  if (state.hoverFrameId) {
+    cancelAnimationFrame(state.hoverFrameId);
+    state.hoverFrameId = 0;
+  }
   hoverTooltip.classList.add('hidden');
   hoverTooltip.innerHTML = '';
 }
@@ -2858,10 +3130,19 @@ function bindHoverTooltip(el, kind, item) {
         : tooltipTextForFood(item);
     setTooltipContent(data);
     hoverTooltip.classList.remove('hidden');
+    state.hoverAnchorEl = el;
+    positionTooltipFromAnchor();
+    scheduleTooltipFollowFrame();
     positionTooltip(ev);
   };
 
-  const onMove = (ev) => positionTooltip(ev);
+  const onMove = (ev) => {
+    if (!state.hoverAnchorEl) {
+      positionTooltip(ev);
+      return;
+    }
+    positionTooltipFromAnchor();
+  };
   const onLeave = () => clearTooltip();
 
   el.addEventListener('mouseenter', onEnter);
@@ -3082,20 +3363,42 @@ function getCanonicalPerkName(perkName) {
   return PERK_CANONICAL_NAMES[key] || raw;
 }
 
-function getPetPerkName(pet) {
+function normalizeStatusName(statusName) {
+  const ailment = getCanonicalAilmentName(statusName);
+  if (ailment) return ailment;
+  const perk = getCanonicalPerkName(statusName);
+  return perk || '';
+}
+
+function getPetStatusName(pet) {
   if (!pet) return '';
-  const raw = typeof pet.equipment === 'string'
+  const fromStatus = normalizeStatusName(typeof pet.status === 'string' ? pet.status : '');
+  if (fromStatus) return fromStatus;
+  const rawEquipment = typeof pet.equipment === 'string'
     ? pet.equipment
     : (pet.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : '');
+  const fromEquipment = normalizeStatusName(rawEquipment);
+  if (fromEquipment) return fromEquipment;
+  return normalizeStatusName(typeof pet.ailment === 'string' ? pet.ailment : '');
+}
+
+function setPetStatusValue(pet, statusName) {
+  if (!pet) return '';
+  const normalized = normalizeStatusName(statusName);
+  pet.status = normalized || null;
+  pet.equipment = normalized || null;
+  pet.ailment = '';
+  return normalized;
+}
+
+function getPetPerkName(pet) {
+  const raw = getPetStatusName(pet);
   if (isAilmentName(raw)) return '';
   return getCanonicalPerkName(raw);
 }
 
 function getPetAilmentName(pet) {
-  if (!pet) return '';
-  const raw = typeof pet.equipment === 'string'
-    ? pet.equipment
-    : (pet.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : '');
+  const raw = getPetStatusName(pet);
   return getCanonicalAilmentName(raw);
 }
 
@@ -3187,6 +3490,16 @@ function parseExperienceFromText(abilityText) {
   return m ? Number(m[1]) : 0;
 }
 
+function parseManaGainFromText(abilityText, foodName = '') {
+  const text = String(abilityText || '').trim();
+  const m = text.match(/Give one pet\s*[+]?(\d+)\s+mana\b/i);
+  if (m) return Math.max(0, Number(m[1] || 0));
+  const nameKey = normalizeName(foodName);
+  if (nameKey === 'bigmanapotion') return 6;
+  if (nameKey === 'manapotion') return 3;
+  return 0;
+}
+
 function getFoodSlotElement(listName, idx) {
   if (listName === 'extra') {
     return extraFoodSlots?.querySelector(`[data-food-list="extra"][data-food-slot="${idx}"]`) || null;
@@ -3220,31 +3533,58 @@ function foodNeedsTarget(food) {
   return /one pet|a pet/i.test(ability);
 }
 
-function resolveWhaleSharkTriggerAt(idx, reason = 'gain') {
+function applyWhaleSharkBuffAt(idx, reason = 'gain') {
   const pet = state.board[idx];
   if (!pet) return false;
   if (normalizeName(pet.name) !== 'whaleshark') return false;
+  const level = getPetLevelInt(pet);
+  const abilityText = getPetAbilityText(pet, level);
+  if (!activatePetAbility({ scope: 'shop', idx, label: 'Ability', pet, abilityText, level })) return false;
   const lvl = Math.max(1, Math.min(3, Number(getPetLevelInt(pet) || 1)));
   const battleMult = state.phase === 'battle' ? 3 : 1;
   const amount = lvl * battleMult;
-  pet.equipment = null;
   buffPetAt(idx, amount, amount, { perkText: 'WHALE SHARK' });
   pulseShopAbilityAt(idx, 'Whale Shark');
   setStatus(`Whale Shark (${reason}): removed perk/ailment and gained +${amount}/+${amount}.`);
   return true;
 }
 
-function clearPetEquipment(idx, reason = 'effect') {
+function triggerFriendLostPerkAbilities(targetIdx, lostPerkName = '', reason = '') {
+  const target = state.board[targetIdx];
+  if (!target || !lostPerkName) return;
+  for (let i = 0; i < BOARD_SIZE; i += 1) {
+    if (i === targetIdx) continue;
+    const pet = state.board[i];
+    if (!pet) continue;
+    if (normalizeName(pet.name) !== 'bilby') continue;
+    const bilbyLevel = Math.max(1, Math.min(3, Number(getPetLevelInt(pet) || 1)));
+    const bilbyAbility = getPetAbilityText(pet, bilbyLevel);
+    if (!activatePetAbility({ scope: 'shop', idx: i, label: 'Ability', pet, abilityText: bilbyAbility, level: bilbyLevel })) continue;
+    const maxTriggers = bilbyLevel;
+    pet.friendLostPerkTriggersThisTurn = Math.max(0, Number(pet.friendLostPerkTriggersThisTurn || 0));
+    if (pet.friendLostPerkTriggersThisTurn >= maxTriggers) continue;
+    pet.friendLostPerkTriggersThisTurn += 1;
+    setPetPerk(targetIdx, 'Garlic');
+    pulseShopAbilityAt(i, 'Bilby');
+    setStatus(`Bilby: gave Garlic to ${target.name} after perk loss${reason ? ` (${reason})` : ''}.`);
+  }
+}
+
+function clearPetEquipment(idx, reason = 'effect', allowWhaleReaction = true) {
   const pet = state.board[idx];
   if (!pet) return '';
-  const previous = String(pet.equipment || '').trim();
+  const previous = getPetStatusName(pet);
   if (!previous) return '';
-  if (useCalculatorShopBridge()) {
+  const previousPerk = getCanonicalPerkName(previous);
+  if (useCalculatorShopBridge() && previousPerk) {
     triggerCalculatorPerkLost(idx, previous);
   }
-  pet.equipment = null;
-  if (normalizeName(pet.name) === 'whaleshark') {
-    resolveWhaleSharkTriggerAt(idx, reason);
+  setPetStatusValue(pet, null);
+  if (previousPerk) {
+    triggerFriendLostPerkAbilities(idx, previous, reason);
+  }
+  if (allowWhaleReaction && normalizeName(pet.name) === 'whaleshark') {
+    applyWhaleSharkBuffAt(idx, reason);
   }
   return previous;
 }
@@ -3252,32 +3592,41 @@ function clearPetEquipment(idx, reason = 'effect') {
 function setPetPerk(idx, perkName, sourceEl = null) {
   const pet = state.board[idx];
   if (!pet || !perkName) return;
-  const previousPerk = getPetPerkName(pet);
   const nextPerk = getCanonicalPerkName(perkName);
   if (!nextPerk) return;
+  const previousStatus = getPetStatusName(pet);
+  if (normalizeName(previousStatus) === normalizeName(nextPerk)) return;
+  const previousPerk = getCanonicalPerkName(previousStatus);
+  if (previousPerk && normalizeName(previousPerk) !== normalizeName(nextPerk)) {
+    triggerFriendLostPerkAbilities(idx, previousPerk, 'status replaced');
+  }
   if (useCalculatorShopBridge() && previousPerk && normalizeName(previousPerk) !== normalizeName(nextPerk)) {
     triggerCalculatorPerkLost(idx, previousPerk);
   }
-  pet.equipment = nextPerk;
+  setPetStatusValue(pet, nextPerk);
   if (useCalculatorShopBridge()) {
-    triggerCalculatorPerkGained(idx, perkName);
+    triggerCalculatorPerkGained(idx, nextPerk);
     // Bridge sync can drop equipment fields for shop pets; preserve explicit local perk.
     const live = state.board[idx];
     if (live && normalizeName(live.name) !== 'whaleshark') {
-      live.equipment = nextPerk;
+      setPetStatusValue(live, nextPerk);
     }
   }
   animateBoardStatDelta({
     scope: 'shop',
     toIdx: idx,
-    perkText: perkName.toUpperCase()
+    perkText: nextPerk.toUpperCase()
   });
+  const gainEffect = SHOP_PERK_GAIN_EFFECTS[normalizePerkNameKey(nextPerk)];
+  if (gainEffect && normalizeName(pet.name) !== 'whaleshark' && state.phase !== 'battle') {
+    buffPetAt(idx, Number(gainEffect.atk || 0), Number(gainEffect.hp || 0), { perkText: nextPerk.toUpperCase() });
+  }
   if (sourceEl) {
     const targetEl = getBoardSlotElement(idx);
     if (targetEl) {
       const token = document.createElement('div');
       token.className = 'fx-fly-icon';
-      token.textContent = perkName.toUpperCase();
+      token.textContent = nextPerk.toUpperCase();
       const fromRect = sourceEl.getBoundingClientRect();
       token.style.left = `${fromRect.left + fromRect.width / 2}px`;
       token.style.top = `${fromRect.top + fromRect.height / 2}px`;
@@ -3292,7 +3641,7 @@ function setPetPerk(idx, perkName, sourceEl = null) {
     }
   }
   if (normalizeName(pet.name) === 'whaleshark') {
-    resolveWhaleSharkTriggerAt(idx, 'perk gained');
+    clearPetEquipment(idx, 'perk gained', true);
   }
 }
 
@@ -3301,8 +3650,13 @@ function setPetAilment(idx, ailmentName, sourceEl = null) {
   if (!pet || !ailmentName) return;
   const canonicalAilment = getCanonicalAilmentName(ailmentName);
   if (!canonicalAilment) return;
-  const previousPerk = getPetPerkName(pet);
-  pet.equipment = canonicalAilment;
+  const previousStatus = getPetStatusName(pet);
+  if (normalizeName(previousStatus) === normalizeName(canonicalAilment)) return;
+  const previousPerk = getCanonicalPerkName(previousStatus);
+  if (previousPerk) {
+    triggerFriendLostPerkAbilities(idx, previousPerk, 'status replaced');
+  }
+  setPetStatusValue(pet, canonicalAilment);
   if (useCalculatorShopBridge()) {
     if (previousPerk && normalizeName(previousPerk) !== normalizeName(canonicalAilment)) {
       triggerCalculatorPerkLost(idx, previousPerk);
@@ -3321,7 +3675,7 @@ function setPetAilment(idx, ailmentName, sourceEl = null) {
     // Bridge sync can drop equipment fields for shop pets; preserve explicit local ailment.
     const live = state.board[idx];
     if (live && normalizeName(live.name) !== 'whaleshark') {
-      live.equipment = canonicalAilment;
+      setPetStatusValue(live, canonicalAilment);
     }
   }
   animateBoardStatDelta({
@@ -3349,7 +3703,7 @@ function setPetAilment(idx, ailmentName, sourceEl = null) {
     }
   }
   if (normalizeName(pet.name) === 'whaleshark') {
-    resolveWhaleSharkTriggerAt(idx, 'ailment gained');
+    clearPetEquipment(idx, 'ailment gained', true);
   }
 }
 
@@ -3357,7 +3711,13 @@ function triggerFoodFaintAtIndex(idx) {
   const pet = state.board[idx];
   if (!pet) return;
   if (useCalculatorShopBridge()) {
+    const beforePet = pet;
     triggerCalculatorFaint(idx);
+    // Bridge can occasionally miss local board mutation for food-faint; enforce local fallback.
+    if (state.board[idx] === beforePet) {
+      state.board[idx] = null;
+      triggerFaintAbility(beforePet, idx);
+    }
     return;
   }
   state.board[idx] = null;
@@ -3392,7 +3752,8 @@ function transformPetFromPool(targetIdx, pool, options = {}) {
   next.mergeStage = current.mergeStage ?? next.mergeStage;
   next.levelInt = current.levelInt ?? next.levelInt;
   next.levelValue = current.levelValue ?? next.levelValue;
-  next.equipment = options.equipment || current.equipment || null;
+  const preservedStatus = normalizeStatusName(options.status || options.equipment || getPetStatusName(current));
+  setPetStatusValue(next, preservedStatus);
   state.board[targetIdx] = next;
   pulseShopAbilityAt(targetIdx, 'Transform');
   return true;
@@ -3557,10 +3918,10 @@ function applySpecialFoodEffect(food, targetIdx, foodRef) {
     return { ok, note: `${food.name}: transformed higher tier` };
   }
 
-  if (/Give one pet \+(\d+) mana/i.test(ability)) {
+  const manaGain = parseManaGainFromText(ability, food?.name || '');
+  if (manaGain > 0) {
     if (!pet) return { ok: false, note: 'No target pet.' };
-    const m = ability.match(/Give one pet \+(\d+) mana/i);
-    pet.mana = Math.max(0, Number(pet.mana || 0) + Number(m?.[1] || 0));
+    pet.mana = Math.max(0, Number(pet.mana || 0) + manaGain);
     pulseShopAbilityAt(targetIdx, 'Mana');
     return { ok: true, note: `${food.name}: granted mana` };
   }
@@ -3579,8 +3940,6 @@ function applySpecialFoodEffect(food, targetIdx, foodRef) {
   }
 
   if (/Double if all pets are tier 4 or higher/i.test(ability)) {
-    if (!pet) return { ok: false, note: 'No target pet.' };
-    const pet = state.board[targetIdx];
     if (!pet) return { ok: false, note: 'No target pet.' };
     const allHighTier = state.board.filter(Boolean).every((p) => Number(p.tier || 1) >= 4);
     const mul = allHighTier ? 2 : 1;
@@ -3653,6 +4012,7 @@ function applyFoodToBoardPet(food, targetIdx, foodRef = null) {
     maybeQueueTierUpReward(bumped.prevLevelInt, bumped.newLevelInt, targetIdx);
     if (bumped.newLevelInt > bumped.prevLevelInt) {
       animateLevelUpAt('shop', targetIdx);
+      pulsePackTierRangeLevelUpAbility(state.board[targetIdx], targetIdx, state.currentPackId);
     }
     if (useCalculatorShopBridge() && bumped.newLevelInt > bumped.prevLevelInt) {
       triggerCalculatorLevelUp(targetIdx);
@@ -3741,9 +4101,7 @@ function boardPetToCalculatorPet(pet) {
   const temp = getActiveTempBuffTotals(pet);
   const levelInt = getPetLevelInt(pet);
   const expValue = Number.isInteger(pet.exp) ? pet.exp : calcExpForLevel(levelInt);
-  const equipment = typeof pet.equipment === 'string'
-    ? pet.equipment
-    : (pet.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : null);
+  const equipment = getPetStatusName(pet) || null;
   return {
     name: pet.name,
     attack: Math.max(1, Number(pet.baseAttack || 0) + temp.atk),
@@ -3807,9 +4165,7 @@ function isStrictAuthoritativePack() {
 
 function boardPetToShopCalcPetConfig(pet) {
   if (!pet) return null;
-  const equipment = typeof pet.equipment === 'string'
-    ? pet.equipment
-    : (pet.equipment && typeof pet.equipment.name === 'string' ? pet.equipment.name : null);
+  const equipment = getPetStatusName(pet) || null;
   return {
     name: pet.name,
     attack: Math.max(1, Number(getPetDisplayAttack(pet) || 1)),
@@ -3915,7 +4271,7 @@ function restoreCalcPetState(calcPet, snapshot) {
 function hydrateBoardFromCalcPet(calcPet) {
   if (!calcPet) return null;
   const template = getTemplatePetByName(calcPet.name);
-  const equipmentName = calcPet.equipment?.name || null;
+  const statusName = normalizeStatusName(calcPet.equipment?.name || '');
   const next = hydrateLevelFields({
     name: calcPet.name,
     tier: Number(template?.tier || calcPet?.tier || 1),
@@ -3923,7 +4279,9 @@ function hydrateBoardFromCalcPet(calcPet) {
     baseHealth: Math.max(1, Number(calcPet.health || 1)),
     ability: template?.ability || { level1: '', level2: '', level3: '' },
     path: resolveTexture(calcPet.name),
-    equipment: equipmentName,
+    status: statusName || null,
+    equipment: statusName || null,
+    ailment: '',
     mana: Math.max(0, Number(calcPet.mana || 0)),
     triggersConsumed: Math.max(0, Number(calcPet.triggersConsumed || 0)),
     foodsEaten: Math.max(0, Number(calcPet.foodsEaten || 0)),
@@ -4411,6 +4769,7 @@ function buildRandomOpponentPetsForTurn(turn, teamSize) {
   const pool = (opponentPack?.pets || []).filter((p) => Number(p.tier || 1) <= maxTierForTurn(turn));
   const maxLevel = maxRandomOpponentLevel(turn);
   const pets = [];
+  const pendingDirtyRats = Math.max(0, Number(state.pendingOpponentDirtyRats || 0));
 
   if (!pool.length) {
     return { opponentPackId, opponentPackName: opponentPack?.name || `Pack ${opponentPackId}`, pets: Array(BOARD_SIZE).fill(null) };
@@ -4427,6 +4786,20 @@ function buildRandomOpponentPetsForTurn(turn, teamSize) {
       exp: calcExpForLevel(levelInt),
       equipment: null
     });
+  }
+
+  for (let i = 0; i < pendingDirtyRats; i += 1) {
+    pets.unshift({
+      name: 'Dirty Rat',
+      attack: 1,
+      health: 1,
+      exp: 0,
+      equipment: null
+    });
+  }
+  if (pendingDirtyRats > 0) {
+    pets.splice(BOARD_SIZE);
+    state.pendingOpponentDirtyRats = 0;
   }
 
   while (pets.length < BOARD_SIZE) pets.push(null);
@@ -4555,6 +4928,7 @@ function simulateBattleOnce() {
     opponentTeamNames: opponent.pets.filter(Boolean).map((pet) => pet.name),
     rollCountAtBattleStart: Math.max(0, Number(state.rollsThisTurn || 0)),
     playerInitialPets: playerPets.map((p) => (p ? { ...p } : null)),
+    playerPackId: state.currentPackId,
     opponentInitialPets: opponent.pets.map((p) => (p ? { ...p } : null)),
     opponentPackId: opponent.opponentPackId,
     playerToy: toyCfg.playerToy,
@@ -4818,13 +5192,16 @@ function applyShopStartTurnEffectAt(idx, forcedName = null, forcedLevel = null) 
   return logs;
 }
 
-function replaceAllShopFoodsWithMilk() {
+function replaceAllShopFoodsWithMilk(level = 1) {
+  const lvl = Math.max(1, Math.min(3, Number(level || 1)));
+  const milkName = lvl >= 3 ? 'Best Milk' : lvl >= 2 ? 'Better Milk' : 'Milk';
+  const template = getTemplateFoodByName(milkName) || getTemplateFoodByName('Milk');
   const milk = {
-    name: 'Milk',
-    tier: 5,
-    ability: 'Give one pet +1 attack and +2 health.',
+    name: String(template?.name || milkName),
+    tier: Number(template?.tier || 5),
+    ability: String(template?.ability || 'Give one pet +1 attack and +2 health.'),
     cost: 0,
-    path: resolveTexture('Milk')
+    path: resolveTexture(template?.name || milkName)
   };
   state.shopFoods.forEach((slot) => {
     slot.item = { ...milk };
@@ -4861,7 +5238,10 @@ function executeStartOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
   const logs = [];
   const level = forcedLevel ?? getPetLevelInt(pet);
   const n = normalizeName(forcedName || pet.name);
-  pulseShopAbilityAt(idx, 'Start');
+  const abilityText = forcedName
+    ? getAbilityTextForPetLevel(forcedName, level)
+    : getPetAbilityText(pet, level);
+  if (!activatePetAbility({ scope: 'shop', idx, label: 'Start', pet, abilityText, level })) return logs;
 
   if (n === 'swan') {
     state.gold += level;
@@ -4900,12 +5280,36 @@ function executeStartOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
   }
 
   if (n === 'owl') {
-    const mouseTemplate = getTemplatePetByName('Mouse');
+    const mouseTemplate = getTemplatePetAcrossPacksByName('Mouse') || getTemplatePetByName('Mouse');
     if (mouseTemplate) {
       const summoned = createBoardPetFromShopPet({ ...mouseTemplate });
       hydrateLevelFields(summoned, calcExpForLevel(level));
       placeSummonedPet(summoned);
       logs.push(`${pet.name}: summoned level ${level} Mouse`);
+    }
+    return logs;
+  }
+
+  if (n === 'prayingmantis') {
+    const neighbors = [];
+    if (idx - 1 >= 0 && state.board[idx - 1]) neighbors.push(idx - 1);
+    if (idx + 1 < BOARD_SIZE && state.board[idx + 1]) neighbors.push(idx + 1);
+    neighbors.forEach((targetIdx) => buffPetAt(targetIdx, -50, -50, { fromIdx: idx }));
+    buffPetAt(idx, 2 * level, 2 * level, { fromIdx: idx });
+    logs.push(`${pet.name}: hit adjacent friends and gained +${2 * level}/+${2 * level}`);
+    return logs;
+  }
+
+  if (n === 'shoebill') {
+    const ahead = getNearestAheadIndices(idx, BOARD_SIZE);
+    const targetIdx = ahead.find((i) => normalizeName(getPetPerkName(state.board[i])) === 'strawberry');
+    if (Number.isInteger(targetIdx) && targetIdx >= 0) {
+      const target = state.board[targetIdx];
+      if (target) {
+        clearPetEquipment(targetIdx, 'shoebill_replace');
+        buffPetAt(targetIdx, 4 * level, 4 * level, { fromIdx: idx });
+        logs.push(`${pet.name}: replaced Strawberry ahead with +${4 * level}/+${4 * level}`);
+      }
     }
     return logs;
   }
@@ -4952,6 +5356,46 @@ function executeStartOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
     return logs;
   }
 
+  if (n === 'catfish') {
+    const ahead = getNearestAheadIndices(idx, 1);
+    if (ahead.length) {
+      const targetIdx = ahead[0];
+      const target = state.board[targetIdx];
+      const buyText = getPetAbilityText(target, getPetLevelInt(target));
+      if (/^buy:/i.test(String(buyText || ''))) {
+        for (let i = 0; i < Math.max(1, level); i += 1) {
+          triggerBuyAbility(target, targetIdx);
+        }
+        logs.push(`${pet.name}: activated ${target?.name || 'friend'} buy ability ${Math.max(1, level)}x`);
+      } else {
+        buffPetAt(targetIdx, 4 * level, 4 * level, { fromIdx: idx });
+        logs.push(`${pet.name}: gave nearest friend ahead +${4 * level}/+${4 * level}`);
+      }
+    }
+    return logs;
+  }
+
+  if (n === 'yeti') {
+    const rolls = 4 * Math.max(1, level);
+    for (let i = 0; i < rolls; i += 1) {
+      state.rollsThisTurn += 1;
+      refillShop(true);
+    }
+    const boardNameSet = new Set(
+      state.board.filter(Boolean).map((p) => normalizeName(p?.name || ''))
+    );
+    state.shopPets.forEach((slot) => {
+      if (!slot?.item) return;
+      if (boardNameSet.has(normalizeName(slot.item.name || ''))) slot.frozen = true;
+    });
+    [...state.shopFoods, ...state.extraShopFoods].forEach((slot) => {
+      if (!slot?.item) return;
+      if (Number(slot.item.tier || 1) >= 6) slot.frozen = true;
+    });
+    logs.push(`${pet.name}: rolled ${rolls}x and froze pet copies + tier 6 foods`);
+    return logs;
+  }
+
   const chosenToy = maybeChooseToyFromPetAbility(pet, level, {
     trigger: 'start',
     interactive: true,
@@ -4971,7 +5415,10 @@ function executeEndOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
   const logs = [];
   const level = forcedLevel ?? getPetLevelInt(pet);
   const n = normalizeName(forcedName || pet.name);
-  pulseShopAbilityAt(idx, 'End');
+  const abilityText = forcedName
+    ? getAbilityTextForPetLevel(forcedName, level)
+    : getPetAbilityText(pet, level);
+  if (!activatePetAbility({ scope: 'shop', idx, label: 'End', pet, abilityText, level })) return logs;
 
   if (n === 'snail') {
     if (!state.lastBattleLost) return logs;
@@ -4990,9 +5437,22 @@ function executeEndOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
 
   if (n === 'hatchingchick') {
     const ahead = getNearestAheadIndices(idx, 1);
-    const amount = 3 * level;
-    ahead.forEach((targetIdx) => applyTemporaryBuffAt(targetIdx, amount, amount, state.turn + 1, { fromIdx: idx }));
-    if (ahead.length) logs.push(`${pet.name}: gave nearest friend ahead +${amount}/+${amount} until next turn`);
+    if (level === 1) {
+      ahead.forEach((targetIdx) => applyTemporaryBuffAt(targetIdx, 3, 3, state.turn + 1, { fromIdx: idx }));
+      if (ahead.length) logs.push(`${pet.name}: gave nearest friend ahead +3/+3 until next turn`);
+    } else if (level === 2) {
+      ahead.forEach((targetIdx) => buffPetAt(targetIdx, 2, 2, { fromIdx: idx }));
+      if (ahead.length) logs.push(`${pet.name}: gave nearest friend ahead +2/+2`);
+    } else {
+      ahead.forEach((targetIdx) => {
+        const target = state.board[targetIdx];
+        if (!target) return;
+        const prevLevel = getPetLevelInt(target);
+        hydrateLevelFields(target, Math.max(0, Math.min(5, getExpFromPet(target) + 1)));
+        maybeQueueTierUpReward(prevLevel, getPetLevelInt(target), targetIdx);
+      });
+      if (ahead.length) logs.push(`${pet.name}: gave nearest friend ahead +1 experience`);
+    }
     return logs;
   }
 
@@ -5012,6 +5472,78 @@ function executeEndOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
       pet.copiedToyExpiresTurn = state.turn + 1;
       logs.push(`${pet.name}: copied ${pet.copiedToyId} toy ability until next turn`);
     }
+    return logs;
+  }
+
+  if (n === 'cardinal') {
+    const ahead = getNearestAheadIndices(idx, BOARD_SIZE);
+    const sourceIdx = ahead.find((i) => Boolean(getPetPerkName(state.board[i])));
+    if (Number.isInteger(sourceIdx) && sourceIdx >= 0) {
+      const perkName = getPetPerkName(state.board[sourceIdx]);
+      const perkFood = getAllFoodsAcrossPacks().find((f) => normalizeName(f.name) === normalizeName(perkName));
+      if (perkFood) {
+        stockFoodInShop({
+          name: perkFood.name,
+          tier: Number(perkFood.tier || 1),
+          ability: String(perkFood.ability || ''),
+          cost: Math.max(0, Number(perkFood.cost ?? BUY_COST) - Math.max(1, level))
+        });
+        logs.push(`${pet.name}: stocked discounted ${perkFood.name}`);
+      }
+    }
+    return logs;
+  }
+
+  if (n === 'elk') {
+    const sellFriends = getBoardPetIndices(idx)
+      .filter((targetIdx) => /^sell:/i.test(getPetAbilityText(state.board[targetIdx], getPetLevelInt(state.board[targetIdx]))));
+    const pick = randFrom(sellFriends);
+    if (Number.isInteger(pick)) {
+      const target = state.board[pick];
+      if (target) {
+        target.sellValue = Math.max(1, Number(target.sellValue || getSellGoldForPet(target))) + (2 * level);
+        logs.push(`${pet.name}: increased ${target.name} sell value by ${2 * level}`);
+      }
+    }
+    return logs;
+  }
+
+  if (n === 'leech') {
+    const ahead = getNearestAheadIndices(idx, 1);
+    if (ahead.length) {
+      const targetIdx = ahead[0];
+      buffPetAt(targetIdx, 0, -level, { fromIdx: idx });
+      buffPetAt(idx, 0, level, { fromIdx: targetIdx });
+      logs.push(`${pet.name}: drained ${level} health from friend ahead`);
+    }
+    return logs;
+  }
+
+  if (n === 'orangutan') {
+    const allies = getBoardPetIndices(idx);
+    let targetIdx = -1;
+    let minHp = Infinity;
+    allies.forEach((i) => {
+      const hp = Number(state.board[i]?.baseHealth || 0);
+      if (hp < minHp) {
+        minHp = hp;
+        targetIdx = i;
+      }
+    });
+    if (targetIdx >= 0) {
+      buffPetAt(targetIdx, 0, 3 * level, { fromIdx: idx });
+      logs.push(`${pet.name}: gave lowest-health friend +${3 * level} health`);
+    }
+    return logs;
+  }
+
+  if (n === 'siamese') {
+    const neighbors = [];
+    if (idx - 1 >= 0 && state.board[idx - 1]) neighbors.push(idx - 1);
+    if (idx + 1 < BOARD_SIZE && state.board[idx + 1]) neighbors.push(idx + 1);
+    const hasDiscountedFood = [...state.shopFoods, ...state.extraShopFoods].some((slot) => slot?.item && Number(slot.item.cost || BUY_COST) < BUY_COST);
+    neighbors.forEach((targetIdx) => buffPetAt(targetIdx, level, hasDiscountedFood ? level : 0, { fromIdx: idx }));
+    if (neighbors.length) logs.push(`${pet.name}: buffed adjacent pets${hasDiscountedFood ? ' (+health from discounted food)' : ''}`);
     return logs;
   }
 
@@ -5047,6 +5579,106 @@ function executeEndOfTurnAbility(idx, forcedName = null, forcedLevel = null) {
       queueNextTurnGold(spend);
       logs.push(`${pet.name}: spent ${spend} gold and queued ${spend} for next turn (cap ${spendCap})`);
     }
+    return logs;
+  }
+
+  if (n === 'baboon') {
+    const eligible = getBoardPetIndices(idx).filter((i) => Number(state.board[i]?.tier || 1) >= Number(pet.tier || 1));
+    const pick = randFrom(eligible);
+    if (Number.isInteger(pick)) {
+      buffPetAt(pick, level, level, { fromIdx: idx });
+      logs.push(`${pet.name}: buffed one current/higher-tier friend +${level}/+${level}`);
+    }
+    return logs;
+  }
+
+  if (n === 'manatee') {
+    buffPetAt(idx, 0, -5, { fromIdx: idx });
+    const ahead = getNearestAheadIndices(idx, 1);
+    ahead.forEach((targetIdx) => buffPetAt(targetIdx, 2 * level, level, { fromIdx: idx }));
+    if (ahead.length) logs.push(`${pet.name}: took 5 damage and buffed nearest friend ahead`);
+    return logs;
+  }
+
+  if (n === 'mantaray') {
+    const hasEmpty = state.board.some((slotPet) => !slotPet);
+    if (hasEmpty) {
+      queueNextTurnGold(2 * level);
+      logs.push(`${pet.name}: queued +${2 * level} gold next turn (empty space)`);
+    }
+    return logs;
+  }
+
+  if (n === 'sealion') {
+    const behind = [];
+    for (let i = idx + 1; i < BOARD_SIZE; i += 1) if (state.board[i]) behind.push(i);
+    const ahead = [];
+    for (let i = idx - 1; i >= 0; i -= 1) if (state.board[i]) ahead.push(i);
+    behind.forEach((i) => buffPetAt(i, level, 0, { fromIdx: idx }));
+    ahead.forEach((i) => buffPetAt(i, 0, level, { fromIdx: idx }));
+    logs.push(`${pet.name}: buffed friends behind atk and friends ahead hp`);
+    return logs;
+  }
+
+  if (n === 'baku') {
+    if ((state.turn % 2) === 0) {
+      const allies = randomIndices(getBoardPetIndices(idx), 2);
+      allies.forEach((i) => {
+        if (getPetAilmentName(state.board[i])) clearPetEquipment(i, 'baku_cleanse', false);
+        buffPetAt(i, 0, level, { fromIdx: idx });
+      });
+      if (allies.length) logs.push(`${pet.name}: converted ailments into +${level} health on ${allies.length} friend(s)`);
+    }
+    return logs;
+  }
+
+  if (n === 'abomination') {
+    const candidates = state.shopPets
+      .map((slot, i) => ({ slot, i }))
+      .filter((entry) => entry.slot?.item && !entry.slot?.frozen)
+      .slice(0, Math.max(1, level));
+    if (candidates.length) {
+      const atk = candidates.reduce((sum, entry) => sum + Math.max(1, Number(entry.slot.item.baseAttack || 1)), 0);
+      const hp = candidates.reduce((sum, entry) => sum + Math.max(1, Number(entry.slot.item.baseHealth || 1)), 0);
+      applyTemporaryBuffAt(idx, atk, hp, state.turn + 1, { fromIdx: idx });
+      logs.push(`${pet.name}: copied ${candidates.length} shop pet(s) stats until next turn`);
+    }
+    return logs;
+  }
+
+  if (n === 'wormofsand') {
+    const triggers = Math.min(2, Math.floor(Math.max(0, Number(state.rollsThisTurn || 0)) / 4));
+    const amount = triggers * level;
+    if (amount > 0) {
+      if (idx - 1 >= 0 && state.board[idx - 1]) buffPetAt(idx - 1, amount, amount, { fromIdx: idx });
+      if (idx + 1 < BOARD_SIZE && state.board[idx + 1]) buffPetAt(idx + 1, amount, amount, { fromIdx: idx });
+      logs.push(`${pet.name}: buffed adjacent friends +${amount}/+${amount} from roll count`);
+    }
+    return logs;
+  }
+
+  if (n === 'behemoth') {
+    const gain = 2 * level;
+    buffPetAt(idx, gain, gain, { fromIdx: idx });
+    pet.baseAttack = Math.min(100, Number(pet.baseAttack || 1));
+    pet.baseHealth = Math.min(100, Number(pet.baseHealth || 1));
+    logs.push(`${pet.name}: gained +${gain}/+${gain} (capped at 100/100)`);
+    return logs;
+  }
+
+  if (n === 'quetzalcoatl') {
+    const lowTier = getBoardPetIndices(idx).filter((i) => Number(state.board[i]?.tier || 1) <= 3);
+    const times = Math.max(1, level);
+    for (let i = 0; i < times; i += 1) {
+      const pick = randFrom(lowTier);
+      if (!Number.isInteger(pick)) continue;
+      const target = state.board[pick];
+      if (!target) continue;
+      const prevLevel = getPetLevelInt(target);
+      hydrateLevelFields(target, Math.max(0, Math.min(5, getExpFromPet(target) + 2)));
+      maybeQueueTierUpReward(prevLevel, getPetLevelInt(target), pick);
+    }
+    logs.push(`${pet.name}: granted +2 XP to tier<=3 friend ${times} time(s)`);
     return logs;
   }
 
@@ -5115,15 +5747,103 @@ function resetTurnTriggerLimits() {
     const pet = state.board[i];
     if (!pet) continue;
     pet.triggersConsumed = 0;
+    pet.friendLostPerkTriggersThisTurn = 0;
+    pet.abilityTriggersThisTurn = 0;
+    pet.abilityTriggerLimit = 0;
+    if (pet.calcPetState && Array.isArray(pet.calcPetState.abilityUsage)) {
+      pet.calcPetState.abilityUsage = pet.calcPetState.abilityUsage.map((usage) => ({
+        ...usage,
+        currentUses: 0,
+        initialCurrentUses: 0
+      }));
+    }
   }
 }
 
-function runStartOfTurnPhase() {
+function applyManaDecayAtTurnStart() {
+  const events = [];
+  for (let i = 0; i < BOARD_SIZE; i += 1) {
+    const pet = state.board[i];
+    if (!pet) continue;
+    const before = Math.max(0, Number(pet.mana || 0));
+    const after = Math.floor(before / 2);
+    pet.mana = after;
+    if (before > after) {
+      events.push({ idx: i, before, after, lost: before - after, petName: String(pet.name || '') });
+    }
+  }
+  return events;
+}
+
+async function playManaDecayAnimation(events = []) {
+  const decayEvents = (Array.isArray(events) ? events : []).filter((e) => Number(e?.lost || 0) > 0);
+  if (!decayEvents.length) return;
+
+  if (!Array.isArray(state.manaDecayRenderBySlot) || state.manaDecayRenderBySlot.length !== BOARD_SIZE) {
+    state.manaDecayRenderBySlot = Array.from({ length: BOARD_SIZE }, () => null);
+  }
+  if (!Array.isArray(state.manaDecayHighlightBySlot) || state.manaDecayHighlightBySlot.length !== BOARD_SIZE) {
+    state.manaDecayHighlightBySlot = Array.from({ length: BOARD_SIZE }, () => false);
+  }
+
+  decayEvents.forEach((entry) => {
+    const idx = Number(entry.idx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= BOARD_SIZE) return;
+    state.manaDecayRenderBySlot[idx] = Math.max(0, Number(entry.before || 0));
+    state.manaDecayHighlightBySlot[idx] = true;
+  });
+  renderBoard();
+
+  const maxLost = Math.max(0, ...decayEvents.map((entry) => Math.max(0, Number(entry.lost || 0))));
+  for (let step = 0; step < maxLost; step += 1) {
+    let changed = false;
+    decayEvents.forEach((entry) => {
+      const idx = Number(entry.idx);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= BOARD_SIZE) return;
+      const minValue = Math.max(0, Number(entry.after || 0));
+      const current = Math.max(0, Number(state.manaDecayRenderBySlot[idx] || 0));
+      if (current > minValue) {
+        state.manaDecayRenderBySlot[idx] = current - 1;
+        changed = true;
+      }
+    });
+    if (!changed) break;
+    renderBoard();
+    await waitMs(250);
+  }
+
+  state.manaDecayRenderBySlot = Array.from({ length: BOARD_SIZE }, () => null);
+  state.manaDecayHighlightBySlot = Array.from({ length: BOARD_SIZE }, () => false);
+  renderBoard();
+}
+
+function reconcileManaAfterTurnStartDecay(events = []) {
+  const decayEvents = Array.isArray(events) ? events : [];
+  decayEvents.forEach((entry) => {
+    const idx = Number(entry?.idx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= BOARD_SIZE) return;
+    const pet = state.board[idx];
+    if (!pet) return;
+    const before = Math.max(0, Number(entry?.before || 0));
+    const after = Math.max(0, Number(entry?.after || 0));
+    const current = Math.max(0, Number(pet.mana || 0));
+    // Bridge sync can transiently restore old pre-decay mana.
+    // If mana snaps exactly back to pre-decay value, keep decayed result.
+    if (current === before && current > after) {
+      pet.mana = after;
+    }
+  });
+}
+
+function runStartOfTurnPhase(options = {}) {
   state.phase = 'start';
   state.foodDiscount = 0;
-  // Strict safety: always clear expired "until next turn" effects at turn start.
-  clearExpiredTemporaryEffects();
-  resetTurnTriggerLimits();
+  const includePrep = options?.includePrep !== false;
+  if (includePrep) {
+    // Strict safety: always clear expired "until next turn" effects at turn start.
+    clearExpiredTemporaryEffects();
+    resetTurnTriggerLimits();
+  }
   if (!doesPackSupportToys(state.currentPackId)) {
     state.teamToys.player = null;
     state.playerToyExplicitlySelected = false;
@@ -5237,6 +5957,76 @@ function parseAbilitySourceNameFromLog(text = '') {
   return source;
 }
 
+function rebuildPackTierIndex() {
+  const out = {};
+  Object.keys(state.packs || {}).forEach((packId) => {
+    const map = {};
+    const pets = state.packs?.[packId]?.pets || [];
+    pets.forEach((pet) => {
+      const key = normalizeName(pet?.name || '');
+      const tier = Number(pet?.tier || 0);
+      if (!key || !Number.isFinite(tier)) return;
+      map[key] = tier;
+    });
+    out[String(packId)] = map;
+  });
+  state.packTierByPack = out;
+}
+
+function isPackPetTierRange(packId, name = '', minTier = 1, maxTier = 6) {
+  const key = normalizeName(name);
+  if (!key) return false;
+  const map = state.packTierByPack?.[String(packId)] || {};
+  const tier = Number(map[key]);
+  return Number.isFinite(tier) && tier >= Number(minTier) && tier <= Number(maxTier);
+}
+
+function pulsePackTierRangeLevelUpAbility(pet, boardIdx, packId = state.currentPackId) {
+  if (!pet || !Number.isInteger(boardIdx) || boardIdx < 0 || boardIdx >= BOARD_SIZE) return;
+  if (!isPackPetTierRange(packId, pet.name, 2, 6)) return;
+  pulseShopAbilityAt(boardIdx, 'Level-up');
+}
+
+function pulseBattleAbilityFromLog(text, snapshot, report = null) {
+  if (!snapshot) return;
+  const sourceName = parseAbilitySourceNameFromLog(text);
+  if (!sourceName) return;
+  const playerIdx = findSnapshotPetIndexByName(snapshot?.player, sourceName);
+  const opponentIdx = findSnapshotPetIndexByName(snapshot?.opponent, sourceName);
+  let side = '';
+  let idx = -1;
+  if (playerIdx >= 0 && opponentIdx < 0) {
+    side = 'player';
+    idx = playerIdx;
+  } else if (opponentIdx >= 0 && playerIdx < 0) {
+    side = 'opponent';
+    idx = opponentIdx;
+  } else if (playerIdx >= 0 && opponentIdx >= 0) {
+    const activeSide = state.battleActive?.side;
+    if (activeSide === 'player' || activeSide === 'opponent') {
+      side = activeSide;
+      idx = activeSide === 'player' ? playerIdx : opponentIdx;
+    } else {
+      side = 'player';
+      idx = playerIdx;
+    }
+  }
+  if (!side || idx < 0) return;
+  const sourcePackId = side === 'player'
+    ? Number(report?.playerPackId || state.currentPackId)
+    : Number(report?.opponentPackId || state.currentPackId);
+  if (!isPackPetTierRange(sourcePackId, sourceName, 2, 6)) return;
+  activatePetAbility({
+    scope: 'battle',
+    side,
+    idx,
+    label: 'Ability',
+    pet: null,
+    abilityText: '',
+    level: 1
+  });
+}
+
 async function playShopAbilityLogSequence(logs, phaseLabel = 'Abilities') {
   const messages = (Array.isArray(logs) ? logs : [])
     .map((entry) => stripHtmlToText(entry?.message || entry || '').trim())
@@ -5271,6 +6061,8 @@ function triggerFriendSummonedAbilities(summonedIdx) {
     const pet = state.board[idx];
     if (!pet) continue;
     const lvl = pet.levelInt ?? 1;
+    const abilityText = getPetAbilityText(pet, lvl);
+    if (!activatePetAbility({ scope: 'shop', idx, label: 'Summon', pet, abilityText, level: lvl })) continue;
     const n = normalizeName(pet.name);
     if (n === 'horse') {
       applyTemporaryBuffAt(summonedIdx, lvl, 0, state.turn + 1, { fromIdx: idx });
@@ -5289,9 +6081,8 @@ function triggerBuyAbility(pet, boardIdx) {
   if (!pet) return;
   const n = normalizeName(pet.name);
   const lvl = getPetLevelInt(pet);
-  if (Number.isInteger(boardIdx) && boardIdx >= 0 && boardIdx < BOARD_SIZE) {
-    pulseShopAbilityAt(boardIdx, 'Buy');
-  }
+  const abilityText = getPetAbilityText(pet, lvl);
+  if (!activatePetAbility({ scope: 'shop', idx: boardIdx, label: 'Buy', pet, abilityText, level: lvl })) return;
   if (useCalculatorShopBridge()) {
     triggerCalculatorBuy(boardIdx);
     if (n === 'cow') {
@@ -5299,7 +6090,7 @@ function triggerBuyAbility(pet, boardIdx) {
         'cow_buy_bridge',
         'Cow buy replacement only touched one main food slot in manual logic and was skipped entirely when calculator bridge handled buy triggers.'
       );
-      replaceAllShopFoodsWithMilk();
+      replaceAllShopFoodsWithMilk(lvl);
     }
     return;
   }
@@ -5315,7 +6106,12 @@ function triggerBuyAbility(pet, boardIdx) {
       'cow_buy_manual',
       'Cow buy replacement only wrote slot 0 and stocked one extra food, leaving other shop-food slots unchanged after expansion.'
     );
-    replaceAllShopFoodsWithMilk();
+    replaceAllShopFoodsWithMilk(lvl);
+  }
+
+  if (n === 'guineapig') {
+    const stats = Math.max(1, lvl);
+    placeSummonedPet(makeTokenPet('Guinea Pig', stats, stats, 1));
   }
 
   if (n === 'anglerfish') {
@@ -5338,6 +6134,38 @@ function triggerBuyAbility(pet, boardIdx) {
       }
       setStatus(`${pet.name}: stocked ${copies} free pet copy(ies) from last opponent.`);
     }
+  }
+
+  if (n === 'africanpenguin') {
+    randomIndices(getBoardPetIndices(boardIdx), 3).forEach((idx) => buffPetAt(idx, lvl, 0, { fromIdx: boardIdx }));
+  }
+
+  if (n === 'cockatoo') {
+    const allies = getBoardPetIndices(boardIdx);
+    let pick = -1;
+    let maxTier = -1;
+    allies.forEach((i) => {
+      const t = Number(state.board[i]?.tier || 1);
+      if (t > maxTier) {
+        maxTier = t;
+        pick = i;
+      }
+    });
+    if (pick >= 0) buffPetAt(pick, 2 * lvl, 2 * lvl, { fromIdx: boardIdx });
+  }
+
+  if (n === 'blueringedoctopus') {
+    getBoardPetIndices(boardIdx).forEach((idx) => buffPetAt(idx, lvl, lvl, { fromIdx: boardIdx }));
+  }
+
+  if (n === 'griffin' || n === 'baddog') {
+    const chosen = maybeChooseToyFromPetAbility(pet, lvl, {
+      trigger: 'buy',
+      interactive: true,
+      triggerLabel: 'buy'
+    });
+    if (chosen) setStatus(`${pet.name}: chose ${chosen.name} (L${state.playerToyLevel})`);
+    return;
   }
 
   maybeChooseToyFromPetAbility(pet, lvl, {
@@ -5363,11 +6191,9 @@ function triggerSellAbility(pet, sourceIdx = -1) {
     }
   };
   const lvl = getPetLevelInt(pet);
-  if (Number.isInteger(sourceIdx) && sourceIdx >= 0 && sourceIdx < BOARD_SIZE) {
-    pulseShopAbilityAt(sourceIdx, 'Sell');
-  }
-  const petKey = normalizeName(pet?.name || '');
   const abilityText = getPetAbilityText(pet, lvl);
+  if (!activatePetAbility({ scope: 'shop', idx: sourceIdx, label: 'Sell', pet, abilityText, level: lvl })) return;
+  const petKey = normalizeName(pet?.name || '');
   const immediateSellGold = getImmediateGoldForTrigger(pet?.name || '', lvl, 'sell');
   const queuedNextTurnSellGold = petKey === 'lemming'
     ? getLemmingNextTurnGold(lvl)
@@ -5430,6 +6256,25 @@ function triggerSellAbility(pet, sourceIdx = -1) {
       const pills = parseCountWord((abilityText.match(/Stock\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+free\s+Sleeping\s+Pills?/i) || [])[1]) || lvl;
       stockSleepingPills(pills);
     }
+    if (normalizeName(pet?.name) === 'mouse') {
+      const mouseFoodName = lvl >= 3 ? 'Best Apple' : lvl >= 2 ? 'Better Apple' : 'Apple';
+      const apple = getTemplateFoodByName(mouseFoodName) || getTemplateFoodByName('Apple') || {
+        name: mouseFoodName,
+        tier: 1,
+        ability: 'Give one pet +1 attack and +1 health.'
+      };
+      state.shopFoods.forEach((slot) => {
+        slot.item = {
+          name: apple.name,
+          tier: Number(apple.tier || 1),
+          ability: String(apple.ability || ''),
+          path: resolveTexture(apple.name),
+          cost: 0
+        };
+        slot.frozen = false;
+        markFoodSlotFx(slot, 'stock');
+      });
+    }
     if (immediateSellGold > 0 && Number(state.gold || 0) < (preSellGold + immediateSellGold)) {
       state.gold = preSellGold + immediateSellGold;
     }
@@ -5452,6 +6297,85 @@ function triggerSellAbility(pet, sourceIdx = -1) {
     stockSleepingPills(pills);
   } else if (n === 'chinchilla') {
     placeSummonedPet(makeTokenPet('Loyal Chinchilla', 2 * lvl, 2 * lvl, 1));
+  } else if (n === 'frog') {
+    const left = sourceIdx - 1;
+    const right = sourceIdx + 1;
+    if (left >= 0 && right < BOARD_SIZE && state.board[left] && state.board[right]) {
+      const leftTier = Number(state.board[left].tier || 1);
+      const rightTier = Number(state.board[right].tier || 1);
+      const tierCap = 2 * Math.max(1, lvl);
+      if (leftTier <= tierCap && rightTier <= tierCap) {
+        const aAtk = state.board[left].baseAttack;
+        const aHp = state.board[left].baseHealth;
+        state.board[left].baseAttack = state.board[right].baseAttack;
+        state.board[left].baseHealth = state.board[right].baseHealth;
+        state.board[right].baseAttack = aAtk;
+        state.board[right].baseHealth = aHp;
+      }
+    }
+  } else if (n === 'marmoset') {
+    state.freeRolls = Math.max(0, Number(state.freeRolls || 0)) + Math.max(1, lvl);
+  } else if (n === 'mouse') {
+    const mouseFoodName = lvl >= 3 ? 'Best Apple' : lvl >= 2 ? 'Better Apple' : 'Apple';
+    const apple = getTemplateFoodByName(mouseFoodName) || getTemplateFoodByName('Apple') || {
+      name: mouseFoodName,
+      tier: 1,
+      ability: 'Give one pet +1 attack and +1 health.'
+    };
+    state.shopFoods.forEach((slot) => {
+      slot.item = {
+        name: apple.name,
+        tier: Number(apple.tier || 1),
+        ability: String(apple.ability || ''),
+        path: resolveTexture(apple.name),
+        cost: 0
+      };
+      slot.frozen = false;
+      markFoodSlotFx(slot, 'stock');
+    });
+  } else if (n === 'lemming') {
+    queueNextTurnGold(lvl);
+  } else if (n === 'opossum') {
+    const faintShop = state.shopPets
+      .map((slot) => slot?.item)
+      .filter((item) => item && /^faint:/i.test(getPetAbilityText(item, 1)));
+    const pick = randFrom(faintShop);
+    if (pick) {
+      pick.baseAttack = Math.max(1, Number(pick.baseAttack || 1) + lvl);
+      pick.baseHealth = Math.max(1, Number(pick.baseHealth || 1) + lvl);
+    }
+  } else if (n === 'herculesbeetle') {
+    const fights = Math.max(0, Number(pet.battlesFought || 0));
+    const totalAtk = fights * lvl;
+    if (totalAtk > 0) {
+      const allies = getBoardPetIndices(sourceIdx);
+      for (let i = 0; i < totalAtk; i += 1) {
+        const pick = randFrom(allies);
+        if (Number.isInteger(pick)) buffPetAt(pick, 1, 0, { fromIdx: sourceIdx });
+      }
+    }
+  } else if (n === 'stoat') {
+    const fromTier = Number(pet.tier || 2);
+    const pack = state.packs[String(state.currentPackId)] || {};
+    const pool = (pack.pets || []).filter((x) => Number(x.tier || 1) === fromTier);
+    const pick = randFrom(pool);
+    if (pick) {
+      const s = createBoardPetFromShopPet({ ...pick });
+      s.baseAttack = 1;
+      s.baseHealth = 1;
+      hydrateLevelFields(s, calcExpForLevel(Math.max(1, lvl)));
+      placeSummonedPet(s);
+    }
+  } else if (n === 'oyster') {
+    state.gold += (3 * lvl);
+  } else if (n === 'cuddletoad') {
+    const chosen = maybeChooseToyFromPetAbility(pet, lvl, {
+      trigger: 'sell',
+      interactive: true,
+      triggerLabel: 'sell'
+    });
+    if (chosen) setStatus(`${pet.name}: chose ${chosen.name} (L${state.playerToyLevel})`);
+    return;
   }
   if (immediateSellGold > 0) {
     state.gold += immediateSellGold;
@@ -5468,9 +6392,8 @@ function triggerSellAbility(pet, sourceIdx = -1) {
 function triggerFaintAbility(pet, soldIdx) {
   const lvl = pet.levelInt ?? 1;
   const n = normalizeName(pet.name);
-  if (Number.isInteger(soldIdx) && soldIdx >= 0 && soldIdx < BOARD_SIZE) {
-    pulseShopAbilityAt(soldIdx, 'Faint');
-  }
+  const abilityText = getPetAbilityText(pet, lvl);
+  if (!activatePetAbility({ scope: 'shop', idx: soldIdx, label: 'Faint', pet, abilityText, level: lvl })) return;
   const nearestBehind = (count = 1) => {
     const out = [];
     for (let i = soldIdx + 1; i < BOARD_SIZE; i += 1) {
@@ -5496,6 +6419,13 @@ function triggerFaintAbility(pet, soldIdx) {
     toy.activation_state = 'broken';
     state.teamToys.player = null;
     syncLegacyPlayerToyFields();
+    return true;
+  };
+  const spendTrumpets = (amount) => {
+    const need = Math.max(0, Number(amount || 0));
+    if (need <= 0) return true;
+    if (Number(state.trumpets || 0) < need) return false;
+    state.trumpets = Math.max(0, Number(state.trumpets || 0) - need);
     return true;
   };
   if (n === 'ant') {
@@ -5588,6 +6518,226 @@ function triggerFaintAbility(pet, soldIdx) {
       hydrateLevelFields(s, calcExpForLevel(lvl));
       placeSummonedPet(s);
     }
+  } else if (n === 'turtle') {
+    const behind = nearestBehind(Math.max(1, lvl));
+    behind.forEach((idx) => setPetPerk(idx, 'Melon'));
+  } else if (n === 'badger') {
+    const dmg = Math.max(1, Math.floor(Number(pet.baseAttack || 1) * (0.5 * Math.max(1, lvl))));
+    if (soldIdx - 1 >= 0 && state.board[soldIdx - 1]) {
+      buffPetAt(soldIdx - 1, 0, -dmg, { fromIdx: soldIdx });
+    }
+    if (soldIdx + 1 < BOARD_SIZE && state.board[soldIdx + 1]) {
+      buffPetAt(soldIdx + 1, 0, -dmg, { fromIdx: soldIdx });
+    }
+  } else if (n === 'rat') {
+    state.pendingOpponentDirtyRats = Math.max(0, Number(state.pendingOpponentDirtyRats || 0)) + Math.max(1, lvl);
+  } else if (n === 'anteater') {
+    for (let i = 0; i < Math.max(1, lvl); i += 1) {
+      const antTemplate = getTemplatePetAcrossPacksByName('Ant') || getTemplatePetByName('Ant');
+      const ant = antTemplate ? createBoardPetFromShopPet({ ...antTemplate }) : makeTokenPet('Ant', 1, 1, 1);
+      ant.baseAttack = 1;
+      ant.baseHealth = 1;
+      hydrateLevelFields(ant, calcExpForLevel(3));
+      placeSummonedPet(ant);
+    }
+  } else if (n === 'blobfish') {
+    const targets = nearestBehind(state.phase === 'battle' ? 2 : 1);
+    targets.forEach((idx) => {
+      const target = state.board[idx];
+      if (target) {
+        const prevLevel = getPetLevelInt(target);
+        hydrateLevelFields(target, Math.max(0, Math.min(5, getExpFromPet(target) + Math.max(1, lvl))));
+        maybeQueueTierUpReward(prevLevel, getPetLevelInt(target), idx);
+      }
+    });
+  } else if (n === 'cockroach') {
+    const cockroachTemplate = getTemplatePetAcrossPacksByName('Cockroach') || getTemplatePetByName('Cockroach');
+    const cockroach = cockroachTemplate ? createBoardPetFromShopPet({ ...cockroachTemplate }) : makeTokenPet('Cockroach', 1, 1, 1);
+    cockroach.baseAttack = 1;
+    cockroach.baseHealth = 1;
+    hydrateLevelFields(cockroach, Math.max(1, lvl));
+    placeSummonedPet(cockroach);
+  } else if (n === 'dove') {
+    const picks = getBoardPetIndices().filter((idx) => normalizeName(getPetPerkName(state.board[idx])) === 'strawberry');
+    randomIndices(picks, Math.min(3, picks.length)).forEach((idx) => buffPetAt(idx, lvl, lvl, { fromIdx: soldIdx }));
+  } else if (n === 'firefly') {
+    const reach = Math.max(1, lvl);
+    for (let i = 0; i < BOARD_SIZE; i += 1) {
+      if (!state.board[i]) continue;
+      if (Math.abs(i - soldIdx) <= reach) {
+        buffPetAt(i, 0, -1, { fromIdx: soldIdx });
+      }
+    }
+  } else if (n === 'hummingbird') {
+    const behind = nearestBehind(Math.max(1, lvl));
+    behind.forEach((idx) => setPetPerk(idx, 'Strawberry'));
+  } else if (n === 'orca') {
+    const allPacks = Object.values(state.packs || {});
+    const faintPool = [];
+    allPacks.forEach((pack) => {
+      (pack?.pets || []).forEach((candidate) => {
+        const text = getPetAbilityText(candidate, 1);
+        if (/^faint:/i.test(String(text || ''))) faintPool.push(candidate);
+      });
+    });
+    for (let i = 0; i < Math.max(1, lvl); i += 1) {
+      const pick = randFrom(faintPool);
+      if (!pick) continue;
+      const s = createBoardPetFromShopPet({ ...pick });
+      s.baseAttack = 6;
+      s.baseHealth = 6;
+      hydrateLevelFields(s, 0);
+      placeSummonedPet(s);
+    }
+  } else if (n === 'sabertoothtiger') {
+    const mammoth = getTemplatePetAcrossPacksByName('Mammoth') || getTemplatePetByName('Mammoth');
+    const timesHurt = Math.max(0, Number(pet.timesHurt || 0));
+    const bonusAtk = 2 * timesHurt;
+    const bonusHp = 3 * timesHurt;
+    if (mammoth) {
+      for (let i = 0; i < Math.max(1, lvl); i += 1) {
+        const s = createBoardPetFromShopPet({ ...mammoth });
+        s.baseAttack = Math.max(1, Number(s.baseAttack || 1) + bonusAtk);
+        s.baseHealth = Math.max(1, Number(s.baseHealth || 1) + bonusHp);
+        placeSummonedPet(s);
+      }
+    }
+  } else if (n === 'stork') {
+    const fromTier = Math.max(1, Number(pet.tier || 2) - 1);
+    const pack = state.packs[String(state.currentPackId)] || {};
+    const pool = (pack.pets || []).filter((x) => Number(x.tier || 1) === fromTier);
+    const pick = randFrom(pool);
+    if (pick) {
+      const s = createBoardPetFromShopPet({ ...pick });
+      const stats = 2 * Math.max(1, lvl);
+      s.baseAttack = stats;
+      s.baseHealth = stats;
+      hydrateLevelFields(s, calcExpForLevel(Math.max(1, lvl)));
+      placeSummonedPet(s);
+    }
+  } else if (n === 'tuna') {
+    const timesHurt = Math.max(0, Number(pet.timesHurt || 0));
+    const picks = randomIndices(getBoardPetIndices(), 1);
+    if (picks.length) {
+      const bonus = timesHurt * Math.max(1, lvl);
+      buffPetAt(picks[0], bonus, bonus, { fromIdx: soldIdx });
+    }
+  } else if (n === 'ammonite') {
+    const behind = nearestBehind(1);
+    if (behind.length) {
+      const targetIdx = behind[0];
+      const mimic = getTemplatePetAcrossPacksByName('Mimic Octopus') || getTemplatePetByName('Mimic Octopus');
+      if (mimic) {
+        const next = createBoardPetFromShopPet({ ...mimic });
+        hydrateLevelFields(next, 0);
+        const xpBonus = Math.floor(Math.max(0, Number(state.rollsThisTurn || 0)) / 2) * Math.max(1, lvl);
+        hydrateLevelFields(next, Math.max(0, Math.min(5, getExpFromPet(next) + xpBonus)));
+        state.board[targetIdx] = next;
+      }
+    }
+  } else if (n === 'groundhog') {
+    state.trumpets = Math.max(0, Number(state.trumpets || 0)) + lvl;
+  } else if (n === 'piedtamarin') {
+    if (spendTrumpets(1)) {
+      setStatus(`${pet.name}: spent 1 trumpet to deal ${3 * lvl} damage to random enemy target(s) in battle context.`);
+    }
+  } else if (n === 'blackneckedstilt') {
+    state.trumpets = Math.max(0, Number(state.trumpets || 0)) + (2 * lvl);
+  } else if (n === 'seaurchin') {
+    setStatus(`${pet.name}: would remove 5 health from first ${Math.max(1, lvl)} enemy(ies) in battle.`);
+  } else if (n === 'squid') {
+    if (spendTrumpets(1)) setStatus(`${pet.name}: would Ink first ${Math.max(1, lvl)} enemy(ies) in battle.`);
+  } else if (n === 'flea') {
+    setStatus(`${pet.name}: would make ${Math.max(1, lvl)} most healthy enemy(ies) Weak in battle.`);
+  } else if (n === 'osprey') {
+    for (let i = 0; i < Math.max(1, lvl); i += 1) {
+      placeSummonedPet(makeTokenPet('Groundhog', 2, 1, 1));
+    }
+  } else if (n === 'surgeonfish') {
+    if (spendTrumpets(2)) {
+      const behind = nearestBehind(2);
+      behind.forEach((idx) => buffPetAt(idx, 0, 4 * lvl, { fromIdx: soldIdx }));
+    }
+  } else if (n === 'cuttlefish') {
+    setStatus(`${pet.name}: would damage and Ink the last ${Math.max(1, lvl)} enemy(ies) in battle.`);
+  } else if (n === 'slug') {
+    const smaller = makeTokenPet('Smaller Slug', 2 * lvl, 2 * lvl, 1);
+    smaller.spawnSmallestSlug = lvl;
+    placeSummonedPet(smaller);
+  } else if (n === 'smallerslug') {
+    const smallest = Math.max(1, lvl);
+    placeSummonedPet(makeTokenPet('Smallest Slug', smallest, smallest, 1));
+  } else if (n === 'vaquita') {
+    const current = Math.max(0, Number(state.trumpets || 0));
+    const pct = 0.5 * Math.max(1, lvl);
+    const gained = Math.max(4 * Math.max(1, lvl), Math.floor(current * pct));
+    state.trumpets = current + gained;
+  } else if (n === 'fireant') {
+    const count = Math.max(1, lvl);
+    const allies = getBoardPetIndices(soldIdx).sort((a, b) => Number(state.board[b]?.tier || 1) - Number(state.board[a]?.tier || 1));
+    allies.slice(0, count).forEach((idx) => buffPetAt(idx, Math.max(1, Number(pet.baseAttack || 1)), 0, { fromIdx: soldIdx }));
+  } else if (n === 'nurseshark') {
+    const spent = Math.min(6, Math.max(0, Number(state.trumpets || 0)));
+    if (spent > 0) {
+      state.trumpets -= spent;
+      setStatus(`${pet.name}: spent ${spent} trumpets and would deal ${spent * 3} damage to ${Math.max(1, lvl)} enemy target(s).`);
+    }
+  } else if (n === 'nyala') {
+    state.trumpets = Math.max(0, Number(state.trumpets || 0)) + (8 * lvl);
+  } else if (n === 'wolf') {
+    for (let i = 0; i < 3; i += 1) {
+      placeSummonedPet(makeTokenPet('Pig', 3 * lvl, 2 * lvl, 1));
+    }
+  } else if (n === 'bigfoot') {
+    queueNextTurnFreeRolls(Math.max(1, lvl));
+  } else if (n === 'frostwolf') {
+    setStatus(`${pet.name}: would apply Cold to first enemy with ${Math.max(1, lvl)} stack(s) in battle.`);
+  } else if (n === 'gargoyle') {
+    const behind = nearestBehind(1);
+    const mana = Math.max(0, Number(pet.mana || 0));
+    const bonus = (2 * lvl) + (mana * lvl);
+    behind.forEach((idx) => buffPetAt(idx, 0, bonus, { fromIdx: soldIdx }));
+  } else if (n === 'calygreyhound') {
+    const mana = Math.max(0, Number(pet.mana || 0));
+    setStatus(`${pet.name}: would spend ${mana} mana to remove ${mana * Math.max(1, lvl)} health from two healthiest enemies.`);
+  } else if (n === 'furbearingtrout') {
+    nearestBehind(Math.max(1, lvl)).forEach((idx) => setPetPerk(idx, 'Rambutan'));
+  } else if (n === 'skeletondog') {
+    const picks = randomIndices(getBoardPetIndices(soldIdx), Math.max(1, lvl));
+    picks.forEach((idx) => buffPetAt(idx, 1, 1, { fromIdx: soldIdx }));
+  } else if (n === 'chimera') {
+    const count = Math.max(1, lvl);
+    const mana = Math.max(0, Number(pet.mana || 0));
+    const scale = Math.floor(mana / 2);
+    for (let i = 0; i < count; i += 1) {
+      placeSummonedPet(makeTokenPet('Chimera Spawn', 3 + scale, 3 + (2 * scale), 1));
+    }
+  } else if (n === 'visitor') {
+    const reach = Math.max(1, lvl);
+    for (let i = 0; i < BOARD_SIZE; i += 1) {
+      if (!state.board[i]) continue;
+      if (Math.abs(i - soldIdx) <= reach) setPetAilment(i, 'Icky');
+    }
+  } else if (n === 'nessie') {
+    placeSummonedPet(makeTokenPet('Boat', 3 * lvl, 3 * lvl, 1));
+  } else if (n === 'hydra') {
+    const heads = Math.max(1, Math.floor(Math.max(1, Number(pet.baseAttack || 1)) / 10));
+    const stats = 5 * Math.max(1, lvl);
+    for (let i = 0; i < heads; i += 1) {
+      placeSummonedPet(makeTokenPet('Head', stats, stats, 1));
+    }
+  } else if (n === 'phoenix') {
+    const rolls = 3 * Math.max(1, lvl);
+    const picks = randomIndices(getBoardPetIndices(), Math.min(rolls, getBoardPetIndices().length));
+    picks.forEach((idx) => setPetAilment(idx, 'Crisp'));
+    placeSummonedPet(makeTokenPet('Young Phoenix', 4 * Math.max(1, lvl), 4 * Math.max(1, lvl), 1));
+  } else if (n === 'warthog') {
+    const triggers = Math.max(0, Math.floor(Math.max(1, Number(pet.baseAttack || 1)) / 3));
+    const amount = Math.max(1, lvl);
+    for (let i = 0; i < triggers; i += 1) {
+      const pick = randFrom(getBoardPetIndices(soldIdx));
+      if (Number.isInteger(pick)) buffPetAt(pick, amount, amount, { fromIdx: soldIdx });
+    }
   } else if (n === 'hoopoebird') {
     // Battle-facing effect handled by authoritative battle engine.
   } else if (n === 'stonefish') {
@@ -5595,8 +6745,10 @@ function triggerFaintAbility(pet, soldIdx) {
   } else if (n === 'lionfish') {
     // Battle-facing effect handled by authoritative battle engine.
   } else if (n === 'rooster') {
-    const atk = Math.max(1, Math.ceil((pet.baseAttack || 1) * 0.5 * lvl));
-    placeSummonedPet(makeTokenPet('Chick', atk, 1, 1));
+    const atk = Math.max(1, Math.ceil((pet.baseAttack || 1) * 0.5));
+    for (let i = 0; i < Math.max(1, lvl); i += 1) {
+      placeSummonedPet(makeTokenPet('Chick', atk, 1, 1));
+    }
   } else if (n === 'mammoth') {
     getBoardPetIndices().forEach((idx) => buffPetAt(idx, 2 * lvl, 2 * lvl, { fromIdx: soldIdx }));
   } else if (n === 'weasel') {
@@ -5811,6 +6963,7 @@ function combineBoardPets(sourceIdx, targetIdx) {
   applyLuckyCatLevelUpNextTurnGold(merged, bumped.prevLevelInt, bumped.newLevelInt);
   if (bumped.newLevelInt > bumped.prevLevelInt) {
     animateLevelUpAt('shop', targetIdx);
+    pulsePackTierRangeLevelUpAbility(merged, targetIdx, state.currentPackId);
   }
   if (useCalculatorShopBridge() && bumped.newLevelInt > bumped.prevLevelInt) {
     triggerCalculatorLevelUp(targetIdx);
@@ -5924,6 +7077,7 @@ function tryBuyShopPetToBoard(shopIdx, boardIdx) {
   applyLuckyCatLevelUpNextTurnGold(merged, bumped.prevLevelInt, bumped.newLevelInt);
   if (bumped.newLevelInt > bumped.prevLevelInt) {
     animateLevelUpAt('shop', boardIdx);
+    pulsePackTierRangeLevelUpAbility(merged, boardIdx, state.currentPackId);
   }
   if (useCalculatorShopBridge() && bumped.newLevelInt > bumped.prevLevelInt) {
     triggerCalculatorLevelUp(boardIdx);
@@ -5965,13 +7119,31 @@ function tryFeedFoodToBoard(listName, foodIdx, boardIdx) {
   if (bridgeMode) {
     triggerCalculatorSpendGold(cost);
   }
-  const manaGainMatch = String(food?.ability || '').match(/Give one pet \+(\d+) mana/i);
-  const manaGain = Math.max(0, Number(manaGainMatch?.[1] || 0));
+  const manaGain = parseManaGainFromText(String(food?.ability || ''), food?.name || '');
   const preMana = Number.isInteger(resolvedBoardIdx) && resolvedBoardIdx >= 0
     ? Math.max(0, Number(state.board[resolvedBoardIdx]?.mana || 0))
     : 0;
+  const preAtk = Number.isInteger(resolvedBoardIdx) && resolvedBoardIdx >= 0
+    ? Math.max(0, Number(state.board[resolvedBoardIdx]?.baseAttack || 0))
+    : 0;
+  const preHp = Number.isInteger(resolvedBoardIdx) && resolvedBoardIdx >= 0
+    ? Math.max(0, Number(state.board[resolvedBoardIdx]?.baseHealth || 0))
+    : 0;
 
   if (bridgeMode) {
+    const snapshotBoardDigest = () => state.board.map((pet) => {
+      if (!pet) return null;
+      return [
+        normalizeName(pet.name),
+        Math.max(0, Number(pet.baseAttack || 0)),
+        Math.max(0, Number(pet.baseHealth || 0)),
+        Math.max(0, Number(getExpFromPet(pet) || 0)),
+        Math.max(0, Number(pet.mana || 0)),
+        normalizeStatusName(getPetStatusName(pet))
+      ].join('|');
+    }).join(';');
+    const beforeBridgeDigest = snapshotBoardDigest();
+
     if (!Number.isInteger(resolvedBoardIdx) || resolvedBoardIdx < 0 || resolvedBoardIdx >= BOARD_SIZE || !state.board[resolvedBoardIdx]) {
       state.gold += cost;
       setStatus(`Cannot use ${food.name}: no valid target pet.`);
@@ -5979,31 +7151,42 @@ function tryFeedFoodToBoard(listName, foodIdx, boardIdx) {
     }
     removeFoodFromSlot(foodRef);
     triggerCalculatorFoodEaten(resolvedBoardIdx, food.name);
+    if (/Make one pet faint/i.test(String(food?.ability || ''))) {
+      triggerFoodFaintAtIndex(resolvedBoardIdx);
+    }
     const livePet = state.board[resolvedBoardIdx];
     if (livePet) {
+      const directBuff = parseSinglePetBuffText(String(food?.ability || ''));
+      const postCalcAtk = Math.max(0, Number(livePet.baseAttack || 0));
+      const postCalcHp = Math.max(0, Number(livePet.baseHealth || 0));
+      if (
+        directBuff
+        && postCalcAtk === preAtk
+        && postCalcHp === preHp
+      ) {
+        livePet.baseAttack = Math.max(1, postCalcAtk + Number(directBuff.atk || 0));
+        livePet.baseHealth = Math.max(1, postCalcHp + Number(directBuff.hp || 0));
+      }
       const perkFromFood = getCanonicalPerkName(parsePerkFromText(String(food?.ability || '')));
       if (perkFromFood) {
-        livePet.equipment = perkFromFood;
-        if (normalizeName(livePet.name) === 'whaleshark') {
-          resolveWhaleSharkTriggerAt(resolvedBoardIdx, 'perk gained');
-        } else {
-          pulseShopAbilityAt(resolvedBoardIdx, perkFromFood);
-        }
+        setPetPerk(resolvedBoardIdx, perkFromFood);
       } else {
         const ailmentFromFood = getCanonicalAilmentName(inferAilmentFromText(String(food?.ability || '')));
         if (ailmentFromFood) {
-          livePet.equipment = ailmentFromFood;
-          if (normalizeName(livePet.name) === 'whaleshark') {
-            resolveWhaleSharkTriggerAt(resolvedBoardIdx, 'ailment gained');
-          } else {
-            pulseShopAbilityAt(resolvedBoardIdx, ailmentFromFood);
-          }
+          setPetAilment(resolvedBoardIdx, ailmentFromFood);
         }
       }
     }
     if (manaGain > 0 && state.board[resolvedBoardIdx]) {
       const expected = preMana + manaGain;
       state.board[resolvedBoardIdx].mana = Math.max(expected, Number(state.board[resolvedBoardIdx].mana || 0));
+    }
+    const afterBridgeDigest = snapshotBoardDigest();
+    if (beforeBridgeDigest === afterBridgeDigest) {
+      const localFallback = applyFoodToBoardPet(food, resolvedBoardIdx, foodRef);
+      if (localFallback.ok) {
+        pushDebugTrigger('FoodBridgeFallback', `Applied local fallback for ${food.name}: ${localFallback.note}`);
+      }
     }
     updateHud();
     renderBoard();
@@ -6145,13 +7328,6 @@ function renderBoard() {
     if (ailmentBadge && ailmentName && ailmentName !== prevAilment) {
       ailmentBadge.classList.add('ailment-pop');
     }
-    if (!ailmentName && prevAilment) {
-      const removed = createAilmentBadgeElement(prevAilment);
-      if (removed) {
-        removed.classList.add('ailment-remove');
-        effectsRow.appendChild(removed);
-      }
-    }
     if (ailmentBadge) effectsRow.appendChild(ailmentBadge);
 
     const actions = document.createElement('div');
@@ -6181,7 +7357,11 @@ function renderBoard() {
       rollCounter.classList.add('show', 'pop');
       el.appendChild(rollCounter);
     }
-    const mana = Math.max(0, Number(pet.mana || 0));
+    const overrideMana = Array.isArray(state.manaDecayRenderBySlot) ? state.manaDecayRenderBySlot[idx] : null;
+    const hasManaOverride = overrideMana !== null && overrideMana !== undefined && Number.isFinite(Number(overrideMana));
+    const mana = hasManaOverride
+      ? Math.max(0, Number(overrideMana))
+      : Math.max(0, Number(pet.mana || 0));
     const prevMana = Math.max(0, Number(state.shopManaBySlot[idx] ?? mana));
     const manaDelta = mana - prevMana;
     state.shopManaBySlot[idx] = mana;
@@ -6189,6 +7369,9 @@ function renderBoard() {
       delta: manaDelta,
       floatingGain: manaDelta > 0 ? manaDelta : 0
     });
+    if (manaBadge && Array.isArray(state.manaDecayHighlightBySlot) && state.manaDecayHighlightBySlot[idx]) {
+      manaBadge.classList.add('mana-decay-highlight');
+    }
     if (manaBadge) el.appendChild(manaBadge);
     el.appendChild(statsText);
     el.appendChild(levelText);
@@ -6261,6 +7444,9 @@ function renderShopPets() {
     });
 
     renderFrozenChip(el, slot.frozen);
+    const now = Date.now();
+    const stockPop = Number(slot.stockPulseUntil || 0) > now;
+    if (stockPop) el.classList.add('stock-pop');
 
     const media = renderCardImage(pet);
     const statsText = createPetStatsElement(pet);
@@ -6606,6 +7792,21 @@ function placeTierUpPetIntoShop(pet, frozen = false) {
   state.shopPets[idx].frozen = Boolean(frozen);
 }
 
+function stockPetInShopPreferEmptyOrBonus(pet, options = {}) {
+  if (!pet) return -1;
+  const freeze = options?.freeze !== false;
+  let idx = firstEmptyShopPetSlot();
+  if (idx < 0) {
+    state.shopPets.push({ item: null, frozen: false });
+    idx = state.shopPets.length - 1;
+    updateShopGridLayout();
+  }
+  state.shopPets[idx].item = { ...pet };
+  state.shopPets[idx].frozen = Boolean(freeze);
+  markPetSlotFx(state.shopPets[idx], 'stock');
+  return idx;
+}
+
 function placeTierUpPetOnBoard(pet) {
   const boardIdx = firstEmptyBoardSlot();
   if (boardIdx < 0) return false;
@@ -6658,6 +7859,7 @@ function switchPack(packId) {
   state.cannedShopPetHpBuff = 0;
   state.peachUpgradeBonus = 0;
   state.lastBattleLost = false;
+  state.trumpets = 0;
   if (state.rollCounterHideTimer) {
     clearTimeout(state.rollCounterHideTimer);
     state.rollCounterHideTimer = null;
@@ -6666,6 +7868,8 @@ function switchPack(packId) {
   state.rollCounterPulseUntilBySlot = Array.from({ length: BOARD_SIZE }, () => 0);
   state.level3SoldThisTurn = 0;
   state.summonedThisTurn = 0;
+  state.pendingOpponentDirtyRats = 0;
+  state.trumpets = 0;
   state.playerToy = null;
   state.playerToyLevel = 1;
   state.playerToyExplicitlySelected = false;
@@ -6682,6 +7886,8 @@ function switchPack(packId) {
   state.debugTriggerLog = [];
   state.shopAilmentBySlot = Array.from({ length: BOARD_SIZE }, () => '');
   state.shopManaBySlot = Array.from({ length: BOARD_SIZE }, () => 0);
+  state.manaDecayRenderBySlot = Array.from({ length: BOARD_SIZE }, () => null);
+  state.manaDecayHighlightBySlot = Array.from({ length: BOARD_SIZE }, () => false);
   state.battleAilmentBySide = {
     player: Array.from({ length: BOARD_SIZE }, () => ''),
     opponent: Array.from({ length: BOARD_SIZE }, () => '')
@@ -6851,6 +8057,7 @@ async function endTurn() {
 
   state.battleInProgress = true;
   state.phase = 'battle';
+  applyRandomWallpaper();
   const endLogs = runEndOfTurnPhase();
   await playShopAbilityLogSequence(endLogs, 'End Turn');
   const queuedFreeRollsFromEnd = queueNextTurnFreeRollsFromLogs(endLogs, 'end');
@@ -6858,6 +8065,9 @@ async function endTurn() {
   try {
     const activeCount = state.board.filter(Boolean).length;
     if (activeCount > 0) {
+      state.board.forEach((p) => {
+        if (p) p.battlesFought = Math.max(0, Number(p.battlesFought || 0)) + 1;
+      });
       const report = simulateBattleOnce();
       const queuedFromBattle = queueBattleNextTurnGoldFromReport(report);
       if (queuedFromBattle > 0) {
@@ -6902,9 +8112,12 @@ async function endTurn() {
   state.rollCounterPulseUntilBySlot = Array.from({ length: BOARD_SIZE }, () => 0);
   state.level3SoldThisTurn = 0;
   state.summonedThisTurn = 0;
+  state.trumpets = 0;
   clearExpiredTemporaryEffects();
+  resetTurnTriggerLimits();
+  const manaDecayEvents = applyManaDecayAtTurnStart();
+  await playManaDecayAnimation(manaDecayEvents);
   const bonusGold = Math.max(0, Number(state.nextTurnBonusGold || 0));
-  state.gold = resolveTurnStartGold();
   state.nextTurnBonusGold = 0;
   state.pendingTierUp = null;
   state.pendingTierUpQueue = [];
@@ -6915,7 +8128,9 @@ async function endTurn() {
   clearTooltip();
   applyTurnTierFilters();
   refillShop(true);
-  const startLogs = runStartOfTurnPhase();
+  state.gold = resolveTurnStartGold();
+  const startLogs = runStartOfTurnPhase({ includePrep: false });
+  reconcileManaAfterTurnStartDecay(manaDecayEvents);
   await playShopAbilityLogSequence(startLogs, `Turn ${state.turn} Start`);
   renderBoard();
   renderShopFoods();
@@ -6926,7 +8141,10 @@ async function endTurn() {
     : '';
   const freeRollLabel = state.freeRolls > 0 ? ` Free rolls: ${state.freeRolls}.` : '';
   const queuedEndFreeLabel = queuedFreeRollsFromEnd > 0 ? ` Queued free rolls from end-turn: ${queuedFreeRollsFromEnd}.` : '';
-  setStatus(`Turn ${state.turn} started. Last battle: ${battleLabel}. Turn flow: end(${endLogs.length}) -> battle -> start(${startLogs.length}). Gold: ${state.gold}.${freeRollLabel}${queuedEndFreeLabel} Shop now allows up to Tier ${maxTierForTurn(state.turn)}.${brokenLabel}`);
+  const manaDecayLabel = manaDecayEvents.length > 0
+    ? ` Mana decay: ${manaDecayEvents.map((x) => `${x.petName} ${x.before}->${x.after}`).join(', ')}.`
+    : '';
+  setStatus(`Turn ${state.turn} started. Last battle: ${battleLabel}. Turn flow: end(${endLogs.length}) -> battle -> reset -> mana_decay -> shop_refresh -> gold_restore -> start(${startLogs.length}). Gold: ${state.gold}.${freeRollLabel}${queuedEndFreeLabel}${manaDecayLabel} Shop now allows up to Tier ${maxTierForTurn(state.turn)}.${brokenLabel}`);
 }
 
 function applyRandomWallpaper() {
@@ -7090,9 +8308,29 @@ function hydratePackData(packData) {
         path: resolvePetTexture('Leafling') || resolvePetTexture('???') || null
       });
     }
+    unicornPack.pets = unicornPack.pets.filter((pet) => !TOKEN_PET_BLACKLIST.has(normalizeName(pet?.name || '')));
   }
 
+  // Shop food cleanup and mana potion normalization.
+  Object.values(out).forEach((pack) => {
+    if (!pack || !Array.isArray(pack.foods)) return;
+    const blockedShopFoods = new Set(['holywater', 'goldenegg']);
+    pack.foods = pack.foods.filter((food) => !blockedShopFoods.has(normalizeName(food?.name || '')));
+
+    const source = pack.foods.find((f) => normalizeName(f?.name || '') === 'bigmanapotion');
+    const hasManaPotion = pack.foods.some((f) => normalizeName(f?.name || '') === 'manapotion');
+    if (!source || hasManaPotion) return;
+    pack.foods.push({
+      ...source,
+      name: 'Mana Potion',
+      tier: 1,
+      ability: 'Give one pet +3 mana.',
+      path: resolveTexture('Mana Potion') || resolveTexture('ManaPotion') || source.path
+    });
+  });
+
   state.packs = out;
+  rebuildPackTierIndex();
 }
 
 function buildRollAbilityTagIndex() {
@@ -7409,3 +8647,4 @@ packSelect.addEventListener('change', (e) => {
 });
 
 init();
+

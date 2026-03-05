@@ -1,31 +1,52 @@
 {
   "scope": "Pack 2 manual hardcode pass",
   "completed_this_pass": {
-    "toy_selection": [
-      "Source parsing now prefers ability text (e.g., 'Sting Ray toy')",
-      "Toy choices are deduplicated by toy name",
-      "No global toy fallback when source mapping is missing"
-    ],
     "start_of_turn": [
-      "Dromedary: buff left-most 2 shop pets +attack/+health",
-      "Gold Fish: increase own sell value",
-      "Tropical Fish: adjacent friends +health",
-      "Caterpillar: +1 experience",
-      "Chicken: future shop pets gain +attack/+health",
-      "Tyrannosaurus: buff two tier 5+ friends"
+      "Caterpillar",
+      "Chicken",
+      "Dromedary",
+      "Ferret",
+      "Gharial",
+      "Gold Fish",
+      "Lemur",
+      "Mongoose",
+      "Owl",
+      "Puppy",
+      "Sting Ray",
+      "Tropical Fish",
+      "Tyrannosaurus"
     ],
     "end_of_turn": [
-      "Bluebird: one random friend +attack",
-      "Hatching Chick: nearest friend ahead temporary +attack/+health until next turn",
-      "Llama: if empty slot, gain +attack/+health"
+      "Bluebird",
+      "Chameleon",
+      "Hatching Chick",
+      "Llama"
     ],
-    "sell_value": [
-      "Sell payout now respects explicit pet.sellValue"
+    "buy": [
+      "Anglerfish"
+    ],
+    "sell": [
+      "Beaver",
+      "Chinchilla",
+      "Chipmunk",
+      "Duck"
+    ],
+    "faint": [
+      "Beluga Sturgeon",
+      "Eagle",
+      "Hoopoe Bird",
+      "Lionfish",
+      "Mandrill",
+      "Microbe",
+      "Mole",
+      "Pangolin",
+      "Snapping Turtle",
+      "Stonefish",
+      "Tahr"
     ]
   },
+  "unresolved_manual_pets": [],
   "next_recommended_tiers": [
-    "Tier 2 reactive triggers (Shrimp, Tabby Cat, Bilby)",
-    "Tier 3 faint/summon hooks (Owl, Pangolin, Purple Frog, Toucan)",
-    "Tier 4-6 friend bought/sold and perk-gain triggers"
+    "Manual trigger coverage resolved for current trigger categories"
   ]
 }
