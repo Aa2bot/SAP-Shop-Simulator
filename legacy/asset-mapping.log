@@ -1,0 +1,5 @@
+2026-03-12
+- Flattened assets/art/Public/Public/* -> assets/art/Public/*
+- Archived legacy pack HTML files pack1-turtle.html, pack2-puppy.html, pack3-star.html, pack4-golden.html, pack5-unicorn.html, pack6-danger.html, _turtle_pack.html, _puppy_pack.html, _star_pack.html, _golden_pack.html, _unicorn_pack.html, _danger_pack.html into legacy/pack-html/
+- Re-synced SAP Calculator art: copied src/assets/art/Public/Public/* from SAP Calculator into assets/art/Public (Background, Cosmetic, Food, Icons, Mascot, etc.)
+- Regenerated assets-manifest.json from assets/art/Public (1186 texture entries, 80 wallpapers) and removed assets/sap_textures folder
